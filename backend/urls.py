@@ -20,31 +20,43 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
 
-from django.shortcuts import render
-
-
+from frontend.views import (
+    dashboard_stats, login_view, signup_view, dashboard_page,
+    transactions_page, budget_page, saving_goals_page,
+    recurring_payments_page, group_expenses_page, analysis_page, profile_page
+)
 
 urlpatterns = [
-    path('api/group-expenses/', include, name='group_expenses'),
     path('admin/', admin.site.urls),
 
     # JWT Authentication Routes
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
 
-    # Group Expenses API Routes
-    path('api/group-expenses/', include('group_expenses.urls')),  # Include the group_expenses URLs
+    # Core App Routes
+    path('api/group-expenses/', include('group_expenses.urls')),
+    path('api/transactions/', include('transactions.urls')),
+    path('api/payments/', include('payments.urls')),
+    path('api/insights/', include('insights.urls')),
     
-    #path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
-    #path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
-    #path('api/transactions/', include('transactions.urls')),  # Ensure this is correctly included
-    #path('api/payments/', include('payments.urls')),
+    # App Routes (Without API prefix for views or distinct patterns)
+    path('users/', include('users.urls')),
+    path('admin_dashboard/', include('admin_dashboard.urls')),
+    path('frontend/', include('frontend.urls')),
+    path('dashboard/', dashboard_page, name='dashboard_page'),
+    path('transactions/', transactions_page, name='transactions_page'),
+    path('budget/', budget_page, name='budget_page'),
+    path('saving-goals/', saving_goals_page, name='saving_goals_page'),
+    path('recurring-payments/', recurring_payments_page, name='recurring_payments_page'),
+    path('group-expenses/', group_expenses_page, name='group_expenses_page'),
+    path('analysis/', analysis_page, name='analysis_page'),
+    path('profile/', profile_page, name='profile_page'),
+    path('dashboard-stats/', dashboard_stats, name='dashboard_stats'),
     
-    #path('api/notifications/', include('notifications.urls')),
-    #path('transactions/', include('transactions.urls')),  
-    #path('insights/', include('insights.urls')),
-    #path('admin_dashboard/', include('admin_dashboard.urls')),
-  
+    # Redirect root to a default view (e.g. frontend dashboard_stats if authenticated)
+    path('', login_view, name='home'),
+    path('login/', login_view, name='login'),
+    path('signup/', signup_view, name='signup'),
 ]
 
 if settings.DEBUG:

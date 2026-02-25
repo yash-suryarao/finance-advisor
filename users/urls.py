@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SignupView, LoginView, get_user_data, update_avatar, ProfileSetupView, FinancialInputView
+from .views import SignupView, LoginView, LogoutView, get_user_data, update_avatar, ProfileSetupView, FinancialInputView
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import FinancialDataView
 from .views import user_profile, user_notifications
@@ -7,6 +7,7 @@ from .views import user_profile, user_notifications
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='signup'),
     path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
     path('profile/', ProfileSetupView.as_view(), name='profile'),
     path('financial-input/', FinancialInputView.as_view(), name='financial_input'),
     path('user-data/', get_user_data, name='get_user_data'),

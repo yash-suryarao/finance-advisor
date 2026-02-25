@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import get_user_model, authenticate, login
+from django.contrib.auth import get_user_model, authenticate, login, logout
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +12,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.utils.timezone import now
 from notifications.models import Notification
+from django.db.models.functions import ExtractMonth
+from django.shortcuts import get_object_or_404
+from django.db.models import Sum
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -35,8 +40,17 @@ class SignupView(APIView):
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+            user = serializer.save()
+            # Log the user in (session) and issue JWT tokens
+            login(request, user)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "message": "User created successfully",
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user_id": user.id,
+                "username": user.username,
+            }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -47,16 +61,46 @@ class LoginView(APIView):
         username = request.data.get("username")
         password = request.data.get("password")
 
+        # Fallback check if user sends email instead of username
         user = authenticate(username=username, password=password)
+        if not user:
+            # Let's check if the username provided is actually the email
+            try:
+                user_obj = get_user_model().objects.get(email=username)
+                user = authenticate(username=user_obj.username, password=password)
+            except get_user_model().DoesNotExist:
+                pass
+                
         if user:
+            # Proper session-based login if session auth is partly relied upon (from project description)
+            login(request, user)
             refresh = RefreshToken.for_user(user)
             return Response({
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
-                "message": "Login successful"
+                "message": "Login successful",
+                "user_id": user.id,
+                "username": user.username
             }, status=status.HTTP_200_OK)
         
         return Response({"error": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+
+            # Ensure session is also cleared
+            logout(request)
+            return Response({"message": "Successfully logged out."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": "Invalid token or token already blacklisted"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -84,7 +128,7 @@ class FinancialDataView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
-        data = get_object_or_404(UsersFinancialData, user_id=user_id)
+        data = get_object_or_404(FinancialData, user=user_id)
         return Response(self.get_serializer(data).data)
 
 
@@ -97,10 +141,15 @@ def user_profile(request):
     Fetch user profile details including avatar and username.
     """
     user = request.user  # Get logged-in user
+    profile = getattr(user, 'profile', None)
+    
+    full_name = f"{user.first_name} {user.last_name}".strip()
+    display_name = full_name if full_name else user.username
+
     profile_data = {
         "id": user.id,
-        "username": user.username,
-        "avatar": user.avatar if user.avatar else "https://via.placeholder.com/100"  # Default avatar if none
+        "username": display_name,
+        "avatar": request.build_absolute_uri(user.profile.avatar.url) if user.profile and user.profile.avatar and user.profile.avatar.name else "https://via.placeholder.com/100"
     }
     return JsonResponse(profile_data)
 
@@ -118,7 +167,7 @@ def user_notifications(request):
     subscription_type = "premium" if user.is_premium else "free"  # Determine subscription type based on `is_premium` field
 
     notifications = Notification.objects.filter(
-        recipient__in=["all", subscription_type, str(user.id)]
+        recipients__in=["all", subscription_type, str(user.id)]
     ).order_by('-timestamp')
 
     notifications_list = [
@@ -132,3 +181,16 @@ def user_notifications(request):
     ]
 
     return JsonResponse(notifications_list, safe=False)
+
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh_token")
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            return Response({"message": "Successfully logged out."}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": "Invalid token or logout failed."}, status=status.HTTP_400_BAD_REQUEST)

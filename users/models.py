@@ -9,6 +9,7 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     phone_no = models.CharField(max_length=15, blank=True, null=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)
     is_premium = models.BooleanField(default=False)
     
     # Role-Based Fields

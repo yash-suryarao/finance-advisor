@@ -10,7 +10,10 @@ from insights.models import BudgetInsight, SavingsGoal
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.shortcuts import redirect
-
+import json
+from django.db.models.functions import ExtractMonth
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 @login_required
 def dashboard_stats(request):
@@ -49,7 +52,8 @@ def dashboard_stats(request):
     return render(request, 'homepage.html', context)
 
 
-@login_required
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def financial_summary(request):
     user = request.user  
 
@@ -59,18 +63,41 @@ def financial_summary(request):
 
     total_balance = Transaction.objects.filter(user=user).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    monthly_income = Transaction.objects.filter(user=user, amount__gt=0, date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    monthly_income = Transaction.objects.filter(user=user, category_type="income", date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    monthly_expenses = Transaction.objects.filter(user=user, amount__lt=0, date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    monthly_expenses = Transaction.objects.filter(user=user, category_type="expense", date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
 
     last_month_balance = Transaction.objects.filter(user=user, date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 1
     balance_change = round(((total_balance - last_month_balance) / last_month_balance) * 100, 2) if last_month_balance else 0
 
-    last_month_income = Transaction.objects.filter(user=user, amount__gt=0, date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 1
+    last_month_income = Transaction.objects.filter(user=user, category_type="income", date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 0
     income_change = round(((monthly_income - last_month_income) / last_month_income) * 100, 2) if last_month_income else 0
 
-    last_month_expenses = Transaction.objects.filter(user=user, amount__lt=0, date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 1
+    last_month_expenses = Transaction.objects.filter(user=user, category_type="expense", date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 0
     expense_change = round(((monthly_expenses - last_month_expenses) / last_month_expenses) * 100, 2) if last_month_expenses else 0
+
+    # Explicit Savings Calculation
+    savings = float(monthly_income) - float(monthly_expenses)
+    last_month_savings = float(last_month_income) - float(last_month_expenses)
+    savings_change = round(((savings - last_month_savings) / abs(last_month_savings)) * 100, 2) if last_month_savings else 0
+    savings_rate = round((savings / float(monthly_income)) * 100, 2) if monthly_income > 0 else 0
+
+    # Debt Ratio
+    from users.models import FinancialData
+    financial_data = FinancialData.objects.filter(user=user).first()
+    total_debt = float(financial_data.total_debt) if financial_data else 0
+    debt_ratio = round((total_debt / float(monthly_income)) * 100, 2) if monthly_income > 0 else 0
+
+    # Financial Health Score
+    if savings_rate > 20 and debt_ratio < 30:
+        financial_health_score = 100
+        financial_health = 'Excellent'
+    elif savings_rate > 10 and debt_ratio < 40:
+        financial_health_score = 70
+        financial_health = 'Good'
+    else:
+        financial_health_score = 30
+        financial_health = 'Poor'
 
     total_goal = SavingsGoal.objects.filter(user=user).aggregate(Sum('target_amount'))['target_amount__sum'] or 1
     total_savings = SavingsGoal.objects.filter(user=user).aggregate(Sum('saved_amount'))['saved_amount__sum'] or 0
@@ -83,17 +110,24 @@ def financial_summary(request):
         'income_change': income_change,
         'monthly_expenses': monthly_expenses,
         'expense_change': expense_change,
+        'savings': savings,
+        'savings_change': savings_change,
+        'savings_rate': savings_rate,
+        'debt_ratio': debt_ratio,
+        'financial_health': financial_health,
+        'financial_health_score': financial_health_score,
         'savings_progress': savings_progress,
     }
 
-    return render(request, 'dashboard.html', context) 
+    return JsonResponse(context)
 
 
-
-
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def spending_analysis(request):
-    user_id = request.user.id  # Assuming user authentication
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
+    user_id = request.user.id
     period = request.GET.get('period', 'month')
 
     # Determine date range
@@ -111,22 +145,46 @@ def spending_analysis(request):
     datewise_income = transactions.filter(category_type="income").values('date').annotate(total=Sum('amount'))
     datewise_expense = transactions.filter(category_type="expense").values('date').annotate(total=Sum('amount'))
 
-    # Prepare chart data
-    dates = [entry['date'].strftime('%Y-%m-%d') for entry in datewise_income]  # Convert date to string
-    income = [entry['total'] for entry in datewise_income]
-    expenses = [entry['total'] for entry in datewise_expense]
+    income_dict = {entry['date']: entry['total'] for entry in datewise_income}
+    expense_dict = {entry['date']: entry['total'] for entry in datewise_expense}
+
+    # Gather all unique dates where a transaction exists
+    unique_dates = sorted(set(income_dict.keys()).union(set(expense_dict.keys())))
+
+    # Prepare chart data explicitly around transaction points
+    dates = [d.strftime('%Y-%m-%d') for d in unique_dates]
+    income = [income_dict.get(d, 0) for d in unique_dates]
+    expenses = [expense_dict.get(d, 0) for d in unique_dates]
 
     # Expense category breakdown
-    expense_categories = transactions.filter(category_type="expense").values('category_id').annotate(total=Sum('amount'))
+    expense_categories = transactions.filter(category_type="expense", category__isnull=False).values('category_id').annotate(total=Sum('amount'))
     category_data = [
         {"category": Category.objects.get(id=entry["category_id"]).name, "amount": entry["total"]}
         for entry in expense_categories
     ]
 
     # Monthly expense trend
-    monthly_expenses = transactions.filter(category_type="expense").extra({'month': "EXTRACT(MONTH FROM date)"}).values('month').annotate(total=Sum('amount'))
+    monthly_expenses = transactions.filter(category_type="expense").annotate(month=ExtractMonth('date')).values('month').annotate(total=Sum('amount')).order_by('month')
     months = [f"Month {entry['month']}" for entry in monthly_expenses]
     monthly_totals = [entry['total'] for entry in monthly_expenses]
+
+    # Monthly expense & income trend for 6 months (Income vs Expenses Bar Chart)
+    last_6_months = []
+    for i in range(5, -1, -1):
+        d = today - timedelta(days=i*30)
+        last_6_months.append((d.year, d.month, d.strftime('%b %Y')))
+
+    bar_months = []
+    bar_income = []
+    bar_expenses = []
+
+    for year, month, label in last_6_months:
+        inc = transactions.filter(category_type="income", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
+        exp = transactions.filter(category_type="expense", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
+        if label not in bar_months:  # prevent duplicate months if days overlap month boundaries
+            bar_months.append(label)
+            bar_income.append(float(inc))
+            bar_expenses.append(float(exp))
 
     context = {
         "dates": dates,
@@ -135,9 +193,48 @@ def spending_analysis(request):
         "expense_categories": category_data,
         "months": months,
         "monthly_expenses": monthly_totals,
+        "bar_months": bar_months,
+        "bar_income": bar_income,
+        "bar_expenses": bar_expenses
     }
 
-    return render(request, 'dashboard.html', {"context": json.dumps(context)})
+    return JsonResponse(context)
 
 
+def login_view(request):
+    return render(request, 'frontend/login.html')
 
+def signup_view(request):
+    return render(request, 'frontend/signup.html')
+
+@login_required
+def dashboard_page(request):
+    return render(request, 'frontend/dashboard.html')
+
+@login_required
+def transactions_page(request):
+    return render(request, 'frontend/transaction.html')
+
+@login_required
+def budget_page(request):
+    return render(request, 'frontend/budget.html')
+
+@login_required
+def saving_goals_page(request):
+    return render(request, 'frontend/goals.html')
+
+@login_required
+def recurring_payments_page(request):
+    return render(request, 'frontend/recurring.html')
+
+@login_required
+def group_expenses_page(request):
+    return render(request, 'frontend/group_expenses.html')
+
+@login_required
+def analysis_page(request):
+    return render(request, 'frontend/analysis.html')
+
+@login_required
+def profile_page(request):
+    return render(request, 'frontend/profile.html')

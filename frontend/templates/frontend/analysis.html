@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Spending Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-50 flex min-h-screen">
+    {% include 'frontend/sidebar.html' %}
+    <div class="flex-1 ml-20 flex flex-col min-w-0">
+        <div class="max-w-7xl mx-auto px-4 py-8 w-full">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">Spending Analysis</h1>
+                <div class="flex items-center space-x-3">
+                    <button
+                        class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-50 transition">
+                        <i class="ri-download-2-line mr-1"></i> Export Report
+                    </button>
+                    <button
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-indigo-700 transition">
+                        <i class="ri-bar-chart-2-line mr-1"></i> Generate AI Summary
+                    </button>
+                </div>
+            </header>
+
+            <!-- Key Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 mb-1">Total Spent (This Month)</p>
+                        <h4 class="text-2xl font-bold text-gray-900" id="totalSpent">₹0</h4>
+                        <p class="text-xs text-green-600 mt-2 font-medium"><i class="ri-arrow-down-line"></i> 5.2% vs
+                            last month</p>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center text-2xl">
+                        <i class="ri-wallet-3-line"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 mb-1">Total Budget</p>
+                        <h4 class="text-2xl font-bold text-gray-900" id="totalBudget">₹0</h4>
+                        <p class="text-xs text-gray-500 mt-2 font-medium">For all categories</p>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-2xl">
+                        <i class="ri-pie-chart-line"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 mb-1">AI Savings Prediction</p>
+                        <h4 class="text-2xl font-bold text-indigo-600" id="projectedSavings">₹0</h4>
+                        <p class="text-xs text-indigo-500 mt-2 font-medium"><i class="ri-sparkling-fill"></i> Estimated
+                            by end of month</p>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-2xl">
+                        <i class="ri-robot-2-line"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spending Trends Chart -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold text-gray-800">Spending vs Budget Trends</h2>
+                    <select
+                        class="bg-gray-50 border border-gray-200 text-gray-700 rounded-md py-1.5 px-3 text-sm outline-none focus:border-indigo-500">
+                        <option>Last 6 Months</option>
+                        <option>This Year</option>
+                    </select>
+                </div>
+                <div id="trendsChart" class="h-80 w-full"></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Category Breakdown Pie -->
+                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 h-96 flex flex-col">
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">Category Breakdown</h2>
+                    <div id="categoryChart" class="flex-grow w-full"></div>
+                </div>
+
+                <!-- AI Insights Detail -->
+                <div class="bg-indigo-50/50 rounded-xl p-6 shadow-sm border border-indigo-100 h-96 overflow-y-auto">
+                    <h2 class="text-lg font-bold text-indigo-900 mb-4 flex items-center"><i
+                            class="ri-sparkling-2-fill text-indigo-500 mr-2"></i> Targeted AI Analysis</h2>
+                    <div id="aiAnalysisBox" class="space-y-4">
+                        <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-indigo-500">
+                            <p class="text-gray-600 text-sm">Analyzing your spending behavior to generate insights...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function fetchAnalysisData() {
+            try {
+                // Fetch mock or actual data for the charts
+                // Reusing budget and transaction endpoints to populate graphs effectively
+                const budgetRes = await fetch('/api/insights/budget-insights/');
+                const budgetData = await fetch('/api/transactions/budget/');
+
+                // Initialize Echarts
+                const trendsChart = echarts.init(document.getElementById('trendsChart'));
+                const categoryChart = echarts.init(document.getElementById('categoryChart'));
+
+                // Demo Data for comparative trends
+                const months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
+                const actualSpends = [24000, 26000, 23000, 31000, 22000, 15000];
+                const budgetLimits = [25000, 25000, 25000, 25000, 26000, 26000];
+
+                trendsChart.setOption({
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    legend: { data: ['Actual Spend', 'Budget Limit'], bottom: 0 },
+                    grid: { top: 30, right: 20, bottom: 40, left: 50 },
+                    xAxis: { type: 'category', data: months },
+                    yAxis: { type: 'value' },
+                    series: [
+                        { name: 'Actual Spend', type: 'bar', data: actualSpends, itemStyle: { color: '#6366f1', borderRadius: [4, 4, 0, 0] }, barWidth: '30%' },
+                        { name: 'Budget Limit', type: 'line', data: budgetLimits, itemStyle: { color: '#ec4899' }, lineStyle: { width: 3, type: 'dashed' }, symbol: 'circle', symbolSize: 8 }
+                    ]
+                });
+
+                categoryChart.setOption({
+                    tooltip: { trigger: 'item' },
+                    legend: { show: false },
+                    series: [
+                        {
+                            name: 'Category',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                            label: { show: true, formatter: '{b}\n{d}%' },
+                            data: [
+                                { value: 6500, name: 'Food', itemStyle: { color: '#f97316' } },
+                                { value: 4000, name: 'Transport', itemStyle: { color: '#3b82f6' } },
+                                { value: 9000, name: 'Housing', itemStyle: { color: '#14b8a6' } },
+                                { value: 2500, name: 'Entertainment', itemStyle: { color: '#ec4899' } }
+                            ]
+                        }
+                    ]
+                });
+
+                window.addEventListener('resize', () => {
+                    trendsChart.resize();
+                    categoryChart.resize();
+                });
+
+                // Populate AI Analysis dummy data for aesthetics
+                document.getElementById('aiAnalysisBox').innerHTML = `
+                    <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-orange-400 mb-4">
+                        <h4 class="font-bold text-gray-800 text-sm mb-1">Holiday Splurge Detected</h4>
+                        <p class="text-gray-600 text-xs">Your spending in December was 24% higher than average, mostly driven by Shopping and Travel. Consider tightening your budget in March to compensate.</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-green-400">
+                        <h4 class="font-bold text-gray-800 text-sm mb-1">Consistent Utilities Saver</h4>
+                        <p class="text-gray-600 text-xs">You've successfully kept utility bills under budget for 3 consecutive months. Great job managing energy consumption!</p>
+                    </div>
+                `;
+
+                // Populate top metrics
+                document.getElementById('totalSpent').innerText = "₹15,000";
+                document.getElementById('totalBudget').innerText = "₹26,000";
+                document.getElementById('projectedSavings').innerText = "₹11,000";
+
+            } catch (e) {
+                console.error("Error loading analysis charts", e);
+            }
+        }
+
+        fetchAnalysisData();
+    </script>
+</body>
+
+</html>

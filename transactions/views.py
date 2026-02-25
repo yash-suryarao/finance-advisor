@@ -16,8 +16,12 @@ from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.models import Profile
-from .serializers import BudgetSerializer, BudgetHistorySerializer
+from .serializers import BudgetSerializer, BudgetHistorySerializer, CategorySerializer
 from payments.models import RecurringPayment
+import pytesseract
+from PIL import Image
+import re
+import io
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -35,6 +39,53 @@ def process_voice_entry(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def upload_receipt(request):
+    """
+    Extracts transaction details from an uploaded receipt image using Tesseract OCR.
+    """
+    if 'receipt' not in request.FILES:
+        return Response({"error": "No receipt image uploaded"}, status=400)
+
+    receipt_file = request.FILES['receipt']
+    
+    try:
+        image = Image.open(receipt_file)
+        extracted_text = pytesseract.image_to_string(image)
+        
+        # Simple heuristic to find amount: look for currency symbols or "Total"
+        amount = 0
+        amount_matches = re.findall(r'(\$|₹|Rs\.?|INR)?\s*(\d+(?:\.\d{2})?)', extracted_text)
+        if amount_matches:
+            # Try to find the largest amount which is typically the total
+            amounts = [float(match[1]) for match in amount_matches if match[1]]
+            if amounts:
+                amount = max(amounts)
+
+        # Default category
+        category = "Other"
+        
+        # basic keyword search in text
+        text_lower = extracted_text.lower()
+        if "food" in text_lower or "restaurant" in text_lower:
+            category = "Food"
+        elif "grocery" in text_lower or "supermarket" in text_lower or "mart" in text_lower:
+            category = "Groceries"
+        elif "fuel" in text_lower or "petrol" in text_lower or "gas" in text_lower:
+            category = "Transport"
+            
+    except Exception as e:
+        return Response({"error": f"Failed to process image: {str(e)}"}, status=500)
+
+    return Response({
+        "amount": amount,
+        "transaction_type": "expense",
+        "category": category,
+        "extracted_text_preview": extracted_text[:200]
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def confirm_voice_transaction(request):
     """
     Saves user-confirmed transaction to the database.
@@ -42,29 +93,34 @@ def confirm_voice_transaction(request):
     user = request.user
     amount = request.data.get("amount")
     transaction_type = request.data.get("transaction_type")
-    category = request.data.get("category")
+    category_name = request.data.get("category", "Other")
 
-    if not amount or not transaction_type or not category:
+    if not amount or not transaction_type or not category_name:
         return Response({"error": "Missing transaction details"}, status=400)
+
+    # Convert string to Category instance
+    category_obj, created = Category.objects.get_or_create(user=user, name=category_name)
 
     transaction = Transaction.objects.create(
         user=user,
         amount=amount,
-        transaction_type=transaction_type,
-        category=category
+        category_type=transaction_type,
+        category=category_obj,
+        date=now().date()
     )
 
     return Response({"message": "Transaction saved successfully!", "transaction_id": transaction.id})
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def get_transactions(request):
-    transactions = Transaction.objects.select_related('category').all().order_by('-date')[:10]  # Fetch latest 10 transactions
+    transactions = Transaction.objects.filter(user=request.user).select_related('category').order_by('-date')[:10]  # Fetch latest 10 transactions
 
     data = [
         {
             "id": t.id,
-            "category_name": t.category.name,  # Fetch category name
+            "category_name": t.category.name if t.category else "Other",  # Fetch category name
             "category_type": t.category_type,  # Income or Expense
             "description": t.description,
             "amount": float(t.amount),
@@ -197,13 +253,45 @@ class TransactionListCreateView(generics.ListCreateAPIView):
 
         return queryset
 
+    def perform_create(self, serializer):
+        # Auto-categorize if description is provided but category is missing
+        instance = serializer.validated_data
+        if 'description' in instance and not instance.get('category'):
+            try:
+                from .categorizer import categorize_transaction
+                predicted_cat_name = categorize_transaction(instance['description'])
+                cat, _ = Category.objects.get_or_create(user=self.request.user, name=predicted_cat_name)
+                serializer.save(user=self.request.user, category=cat)
+                return
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to auto-categorize: {e}")
+        serializer.save(user=self.request.user)
+
+
+
+
+class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user)
 
 
 
 class CategoryListView(generics.ListAPIView):
-    queryset = Category.objects.all()
-    serializer_class = serializers.ModelSerializer
-    serializer_class.Meta = type("Meta", (object,), {"model": Category, "fields": "__all__"})
+    permission_classes = [IsAuthenticated]
+    serializer_class = CategorySerializer
+
+    def get_queryset(self):
+        queryset = Category.objects.filter(user=self.request.user)
+        if not queryset.exists():
+            default_categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Salary', 'Entertainment', 'Other']
+            for name in default_categories:
+                Category.objects.create(user=self.request.user, name=name)
+            queryset = Category.objects.filter(user=self.request.user)
+        return queryset
 
 
 
@@ -226,35 +314,27 @@ class CurrencyConverter(APIView):
         else:
             return Response({"error": "Invalid currency"}, status=400)
 
-
-
-class TransactionListCreateView(generics.ListCreateAPIView):
-    serializer_class = TransactionSerializer
-    pagination_class = StandardResultsSetPagination
+class BudgetView(generics.ListCreateAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = Transaction.objects.filter(user_id=user.id).order_by('-date')
+        return TransactionsBudget.objects.filter(user=self.request.user)
 
-        # Convert transactions to user’s preferred currency
-        user_profile = UsersProfile.objects.filter(user_id=user.id).first()
-        user_currency = user_profile.preferred_currency if user_profile else 'USD'
-        base_currency = 'USD'  # Assuming transactions are stored in USD
-        
-        if user_currency != base_currency:
-            for transaction in queryset:
-                rate = self.get_conversion_rate(base_currency, user_currency)
-                transaction.amount = transaction.amount * rate  # Convert amount
 
-        return queryset
+class BudgetHistoryView(generics.ListAPIView):
+    serializer_class = BudgetHistorySerializer
+    permission_classes = [IsAuthenticated]
 
-    def get_conversion_rate(self, base_currency, target_currency):
-        api_url = f"https://api.exchangerate-api.com/v4/latest/{base_currency}"
-        response = requests.get(api_url)
-        if response.status_code == 200:
-            data = response.json()
-            return data["rates"].get(target_currency, 1)
-        return 1
+    def get_queryset(self):
+        return TransactionsBudgetHistory.objects.filter(
+            user=self.request.user, 
+            month=self.request.query_params.get('month'), 
+            year=self.request.query_params.get('year')
+        )
+
+
+
 
 class BudgetView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer

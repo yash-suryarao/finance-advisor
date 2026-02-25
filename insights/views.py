@@ -6,12 +6,13 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import SavingsGoal
 from insights.utils import track_savings_progress
-from django.db.models import Sum
+from django.db.models import Sum, Avg
 from .models import BudgetInsight
-from transactions.models import Budget, BudgetHistory
+from transactions.models import Budget as TransactionsBudget, BudgetHistory, Transaction
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from django.utils.timezone import now
 from datetime import datetime, timedelta
@@ -97,48 +98,75 @@ def update_goal_savings(request):
 @permission_classes([IsAuthenticated])
 def ai_insights(request):
     """
-    Generates AI insights based on budget history and spending patterns.
+    Generates AI insights based on predictive forecasting and transaction limits.
     """
     user = request.user
     last_30_days = now() - timedelta(days=30)
-
     insights = []
 
-    # Fetch spending trends from transactions
+    # Get actual spends per category over the last 30 days
     spending_data = (
-        Transaction.objects.filter(user_id=user.id, date__gte=last_30_days)
-        .values('category_id')
+        Transaction.objects.filter(user=user, date__gte=last_30_days)
+        .values('category__name')
         .annotate(total_spent=Sum('amount'))
     )
+    
+    budgets = TransactionsBudget.objects.filter(user=user)
+    budget_dict = {b.category: float(b.monthly_limit) for b in budgets}
 
-    # Fetch historical budget data
-    budget_history = BudgetHistory.objects.filter(user=user).values(
-        'category', 'previous_limit', 'actual_spent', 'suggested_limit'
-    )
-
-    # Generate AI insights based on history
-    for record in budget_history:
-        category = record['category']
-        prev_limit = record['previous_limit']
-        spent = record['actual_spent']
-        suggested = record['suggested_limit']
-
-        if spent > prev_limit:
+    for spend in spending_data:
+        category = spend['category__name'] or "Uncategorized"
+        total_spent = float(spend['total_spent'] or 0)
+        
+        limit = budget_dict.get(category, 0.0)
+        if limit == 0.0:
+            continue
+            
+        # Predict future spend for the next 30 days
+        projected = predict_future_spending(user, category)
+        try:
+            projected_val = float(projected)
+            # Add current spending and forecasted difference for a complete 30-day window expectation
+            expected_total = total_spent + (projected_val / 2) # simplified logic
+        except ValueError:
+            expected_total = total_spent
+             
+        suggested = limit * 0.9 if total_spent > limit else limit
+        
+        if total_spent > limit:
             insights.append({
                 "title": f"Overspending in {category}",
-                "message": f"You spent ₹{spent}, exceeding your ₹{prev_limit} budget.",
-                "suggested_budget": suggested,
+                "message": f"You spent ₹{total_spent:.2f}, exceeding your ₹{limit:.2f} budget.",
+                "suggested_budget": round(suggested, 2),
                 "category": category,
                 "action_url": "#"
+            })
+        elif expected_total > limit:
+            insights.append({
+                "title": f"Predicted Overspending in {category}",
+                "message": f"You are at ₹{total_spent:.2f}. At your AI forecasted pace, you may hit ₹{expected_total:.2f} (Budget: ₹{limit:.2f}).",
+                "suggested_budget": round(limit, 2),
+                "category": category,
+                "action_url": "/budget/"
             })
         else:
             insights.append({
                 "title": f"Good Budget Control in {category}",
-                "message": f"You stayed within your ₹{prev_limit} budget. Suggested new budget: ₹{suggested}",
-                "suggested_budget": suggested,
+                "message": f"You are well within your ₹{limit:.2f} budget. Projected total spend: ₹{expected_total:.2f}.",
+                "suggested_budget": round(suggested, 2),
                 "category": category,
                 "action_url": "#"
             })
+
+    # Generic insights fallback
+    if not insights:
+        insights.append({
+            "title": "Insufficient Data",
+            "message": "Start adding transactions and a budget to receive personalized AI financial forecasts.",
+            "suggested_budget": 0,
+            "category": "All",
+            "action_url": "/dashboard/"
+        })
 
     return Response(insights)
 
@@ -155,7 +183,7 @@ def accept_suggested_budget(request):
     if not category or not new_limit:
         return Response({"error": "Missing category or new limit"}, status=400)
 
-    budget, created = Budget.objects.get_or_create(user_id=user.id, category=category)
+    budget, created = TransactionsBudget.objects.get_or_create(user_id=user.id, category=category)
     budget.monthly_limit = new_limit
     budget.save()
 
@@ -167,7 +195,7 @@ class BudgetInsightView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return InsightsBudgetInsight.objects.filter(user_id=self.kwargs['user_id'])
+        return BudgetInsight.objects.filter(user=self.request.user)
 
 
 
@@ -177,7 +205,7 @@ class BudgetInsightView(generics.ListAPIView):
 def get_savings_insights(request):
     """Fetch AI-based savings recommendations for the user."""
     user = request.user
-    insights = InsightsBudgetInsight.objects.filter(user_id=user.id).order_by('-created_at')
+    insights = BudgetInsight.objects.filter(user_id=user.id).order_by('-created_at')
 
     insights_list = [
         {
@@ -200,39 +228,60 @@ def get_savings_projections(request):
     current_year = now().year
     current_month = now().month
 
-    # Fetch past budget history
+    # Fetch past budget history (total limits vs actual spent to calculate real savings)
     budget_history = (
         BudgetHistory.objects
         .filter(user=user, year=current_year)
         .values('month')
-        .annotate(total_saved=Sum('suggested_limit'))
+        .annotate(
+            total_budget=Sum('previous_limit'),
+            total_spent=Sum('actual_spent')
+        )
         .order_by('month')
     )
 
-    # Fetch current budget limit for future projection
-    future_budget = (
-        TransactionsBudget.objects
-        .filter(user=user)
-        .aggregate(total_budget=Sum('monthly_limit'))
-    )['total_budget'] or 0
+    # Fetch current budget limit for future projection base
+    budget_agg = TransactionsBudget.objects.filter(user=user).aggregate(total=Sum('monthly_limit'))
+    current_budget_total = float(budget_agg['total'] or 0)
+    
+    # Estimate average monthly spend to find average savings
+    spend_agg = Transaction.objects.filter(user=user, date__year=current_year).aggregate(avg=Avg('amount'))
+    avg_spent = float(spend_agg['avg'] or 0)
+    
+    projected_monthly_savings = current_budget_total - avg_spent
+    if projected_monthly_savings <= 0:
+        projected_monthly_savings = current_budget_total * 0.10 # default 10%
 
     # Prepare projection data
     months = []
     savings_data = []
+    cumulative_savings = 0.0
 
+    # Accrue historical
     for entry in budget_history:
-        month_name = datetime(current_year, entry['month'], 1).strftime('%b')  # e.g., "Jan"
+        month_name = datetime(current_year, entry['month'], 1).strftime('%b')
         months.append(month_name)
-        savings_data.append(float(entry['total_saved']))
+        
+        saved_that_month = float(entry['total_budget'] or 0) - float(entry['total_spent'] or 0)
+        if saved_that_month < 0: saved_that_month = 0
+        
+        cumulative_savings += saved_that_month
+        savings_data.append(cumulative_savings)
 
-    # Forecast next 3 months
-    for i in range(1, 4):
-        future_month = (current_month + i) % 12 or 12
-        future_month_name = datetime(current_year, future_month, 1).strftime('%b')
+    # Initial historical seed if db is empty
+    if not months:
+        months.append(datetime(current_year, current_month, 1).strftime('%b'))
+        savings_data.append(0.0)
 
-        # Assume savings grow based on current monthly budget allocation
+    # Forecast next 12 months
+    for i in range(1, 13):
+        future_month_val = (current_month + i - 1) % 12 + 1
+        future_year_val = current_year + ((current_month + i - 1) // 12)
+        future_month_name = datetime(future_year_val, future_month_val, 1).strftime('%b')
+
         months.append(future_month_name)
-        savings_data.append(savings_data[-1] + float(future_budget) if savings_data else float(future_budget))
+        cumulative_savings += projected_monthly_savings
+        savings_data.append(cumulative_savings)
 
     return Response({"months": months, "amounts": savings_data}, status=status.HTTP_200_OK)
 

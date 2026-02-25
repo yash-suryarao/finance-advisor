@@ -1,5 +1,7 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,176 +11,406 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
 </head>
+
 <body class="bg-gray-50">
-    <!-- Header -->
-    <header class="bg-white border-b border-gray-200">
-        <div class="flex items-center justify-between px-8 py-4">
-            <!-- Welcome Message -->
-            <div>
-                <h2 id="welcomeMessage" class="text-2xl font-semibold text-gray-900">Welcome back, User</h2>
-                <p id="currentDate" class="text-sm text-gray-500"></p>
-            </div>
-
-            <!-- Right Section: Notifications & User Avatar -->
-            <div class="flex items-center space-x-4">
-                <!-- Notification Icon -->
-                <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-gray-900">
-                    <div class="w-6 h-6 flex items-center justify-center">
-                        <i class="ri-notification-line"></i>
-                    </div>
-                    <span id="notificationBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
-                </button>
-
-                <!-- Notification Dropdown -->
-                <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
-                    <div id="notificationList" class="p-4"></div>
+    {% include 'frontend/sidebar.html' %}
+    <div class="flex-1 ml-20 flex flex-col">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200">
+            <div class="flex items-center justify-between px-8 py-4">
+                <!-- Welcome Message -->
+                <div>
+                    <h2 id="welcomeMessage" class="text-2xl font-semibold text-gray-900">Welcome back, User</h2>
+                    <p id="currentDate" class="text-sm text-gray-500"></p>
                 </div>
 
-                <!-- User Profile Dropdown -->
-                <div class="relative">
-                    <button id="userDropdownBtn" class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <img id="userAvatar" src="https://via.placeholder.com/40" class="w-8 h-8 rounded-full" alt="User">
+                <!-- Right Section: Notifications & User Avatar -->
+                <div class="flex items-center space-x-4">
+                    <!-- Notification Icon -->
+                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-gray-900">
+                        <div class="w-6 h-6 flex items-center justify-center">
+                            <i class="ri-notification-line"></i>
+                        </div>
+                        <span id="notificationBadge"
+                            class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
                     </button>
-                    
-                    <!-- Dropdown Menu -->
-                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg">
-                        <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="ri-user-line mr-2"></i> Profile
-                        </a>
-                        <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="ri-logout-box-line mr-2"></i> Logout
-                        </a>
+
+                    <!-- Notification Dropdown -->
+                    <div id="notificationDropdown"
+                        class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div id="notificationList" class="p-4"></div>
+                    </div>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="relative">
+                        <button id="userDropdownBtn"
+                            class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                            <img id="userAvatar" src="https://via.placeholder.com/40" class="w-8 h-8 rounded-full"
+                                alt="User">
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="userDropdown"
+                            class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg">
+                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="ri-user-line mr-2"></i> Profile
+                            </a>
+                            <a href="{% url 'logout' %}"
+                                class="logout-btn block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <i class="ri-logout-box-line mr-2"></i> Logout
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Main Content -->
-    <div class="container mx-auto px-6 py-4">
-        <!-- Financial Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Total Balance -->
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-medium text-gray-500">Total Balance</h3>
-                    <div class="w-8 h-8 bg-primary bg-opacity-10 rounded-full flex items-center justify-center">
-                        <i class="ri-wallet-line text-primary"></i>
+        <!-- Main Content -->
+        <div class="container mx-auto px-6 py-8">
+            <!-- 1️⃣ Top Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Balance -->
+                <div
+                    class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden transition hover:shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-sm font-medium text-gray-500">Total Balance</h3>
+                        <i class="ri-wallet-3-line text-gray-400 text-xl"></i>
                     </div>
+                    <p id="totalBalance" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="balanceChange" class="text-sm font-medium">Loading...</p>
                 </div>
-                <p id="totalBalance" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                <p id="balanceChange" class="text-sm text-green-600 mt-2">
-                    <i class="ri-arrow-up-line"></i>
-                    Loading...
-                </p>
+
+                <!-- Monthly Income -->
+                <div
+                    class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden transition hover:shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-sm font-medium text-gray-500">Monthly Income</h3>
+                        <div
+                            class="w-6 h-6 rounded-full bg-green-50 border border-green-200 flex items-center justify-center">
+                            <i class="ri-check-line text-green-500 text-xs"></i>
+                        </div>
+                    </div>
+                    <p id="monthlyIncome" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="incomeChange" class="text-sm font-medium">Loading...</p>
+                </div>
+
+                <!-- Monthly Expenses -->
+                <div
+                    class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden transition hover:shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-sm font-medium text-gray-500">Monthly Expenses</h3>
+                        <div
+                            class="w-6 h-6 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
+                            <i class="ri-shopping-cart-2-line text-red-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <p id="monthlyExpenses" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="expenseChange" class="text-sm font-medium">Loading...</p>
+                </div>
+
+                <!-- Savings -->
+                <div
+                    class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden transition hover:shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-sm font-medium text-gray-500">Savings</h3>
+                        <div class="w-6 h-6 rounded-full bg-purple-50 flex items-center justify-center">
+                            <i class="ri-safe-2-line text-purple-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <p id="savingsAmount" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="savingsChange" class="text-sm font-medium">Loading...</p>
+                </div>
             </div>
 
-            <!-- Monthly Income -->
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-medium text-gray-500">Monthly Income</h3>
-                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <i class="ri-arrow-up-circle-line text-green-600"></i>
+            <!-- 2️⃣ Income vs Expenses Section -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                <!-- Bar Chart (Left - 2 columns span) -->
+                <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Income vs Expenses</h3>
+                        <div class="flex items-center space-x-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                            <button
+                                class="px-3 py-1 text-sm bg-white shadow-sm rounded border border-gray-200 font-medium text-gray-700">Month</button>
+                            <button
+                                class="px-3 py-1 text-sm text-gray-500 font-medium hover:text-gray-700 transition">Year</button>
+                        </div>
+                    </div>
+                    <div id="incomeVsExpensesChart" class="h-[320px] w-full"></div>
+                </div>
+
+                <!-- Financial Health (Right - 1 column span) -->
+                <div class="bg-white p-6 flex flex-col justify-between rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-semibold text-gray-900">Financial Health</h3>
+                        <i class="ri-information-line text-gray-400 cursor-pointer hover:text-gray-600 transition"
+                            title="Overall Health Score based on Savings & Debt"></i>
+                    </div>
+
+                    <!-- Gauge container -->
+                    <div id="financialHealthGauge" class="h-44 w-full -mt-2"></div>
+
+                    <!-- Progress Bars -->
+                    <div class="space-y-5 mt-2">
+                        <!-- Savings Rate -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-6 h-6 rounded-full bg-green-50 flex items-center justify-center">
+                                        <i class="ri-arrow-up-line text-green-500 text-sm"></i>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-700">Savings Rate</span>
+                                </div>
+                                <span id="savingsRateLabel"
+                                    class="text-sm font-bold text-gray-900 tracking-tight">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div id="savingsRateBar"
+                                    class="bg-green-500 h-full rounded-full transition-all duration-1000 ease-out"
+                                    style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Debt Ratio -->
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center">
+                                        <i class="ri-arrow-down-line text-red-500 text-sm"></i>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-700">Debt Ratio</span>
+                                </div>
+                                <span id="debtRatioLabel"
+                                    class="text-sm font-bold text-gray-900 tracking-tight">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div id="debtRatioBar"
+                                    class="bg-red-500 h-full rounded-full transition-all duration-1000 ease-out"
+                                    style="width: 0%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <p id="monthlyIncome" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                <p id="incomeChange" class="text-sm text-green-600 mt-2">
-                    <i class="ri-arrow-up-line"></i>
-                    Loading...
-                </p>
             </div>
 
-            <!-- Monthly Expenses -->
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-medium text-gray-500">Monthly Expenses</h3>
-                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <i class="ri-arrow-down-circle-line text-red-600"></i>
+            <!-- 3️⃣ Action Buttons Section -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <a href="/transactions/"
+                    class="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition group">
+                    <i class="ri-add-line text-2xl text-gray-500 mb-2 group-hover:text-gray-800 transition"></i>
+                    <span class="text-sm font-medium text-gray-700">Add Transaction</span>
+                </a>
+
+                <a href="/group-expenses/"
+                    class="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition group">
+                    <div
+                        class="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-100 transition">
+                        <i class="ri-user-add-line text-blue-500 text-lg"></i>
                     </div>
-                </div>
-                <p id="monthlyExpenses" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                <p id="expenseChange" class="text-sm text-red-600 mt-2">
-                    <i class="ri-arrow-down-line"></i>
-                    Loading...
-                </p>
-            </div>
+                    <span class="text-sm font-medium text-gray-700">Split Bills</span>
+                </a>
 
-            <!-- Savings Progress -->
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-medium text-gray-500">Savings Progress</h3>
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <i class="ri-safe-line text-blue-600"></i>
+                <a href="/budget/"
+                    class="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition group">
+                    <div
+                        class="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center mb-2 group-hover:bg-purple-100 transition">
+                        <i class="ri-mic-line text-purple-500 text-lg"></i>
                     </div>
-                </div>
-                <p id="savingsProgress" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div id="savingsProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%;"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <button id="voiceEntryBtn" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                    <i class="ri-mic-line text-3xl text-gray-600 mb-2"></i>
-                    <span class="text-sm font-medium text-gray-700">Voice Entry</span>
-                </button>
-                <a href="/set-budget" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                    <i class="ri-pie-chart-line text-3xl text-gray-600 mb-2"></i>
                     <span class="text-sm font-medium text-gray-700">Set Budget</span>
                 </a>
-                <a href="/add-transaction" class="flex flex-col items-center justify-center p-4 bg-primary bg-opacity-10 rounded-lg">
-                    <i class="ri-add-circle-line text-3xl text-primary mb-2"></i>
-                    <span class="text-sm font-medium text-primary">Add Transaction</span>
+
+                <a href="/ai-insights/"
+                    class="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition group">
+                    <div
+                        class="w-10 h-10 bg-yellow-50 rounded-full flex items-center justify-center mb-2 group-hover:bg-yellow-100 transition">
+                        <i class="ri-lightbulb-flash-line text-yellow-500 text-lg"></i>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">AI Insights</span>
                 </a>
-                <a href="/ai-insights" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                    <i class="ri-line-chart-line text-3xl text-gray-600 mb-2"></i>
-                    <span class="text-sm font-medium text-gray-700">Analyze Spending</span>
-                </a>
+            </div>
+
+            <!-- 4️⃣ Recent Transactions & Budget Section -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                <!-- Recent Transactions (Left - 2 columns span) -->
+                <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                        <a href="/transactions/"
+                            class="text-sm font-semibold text-gray-500 hover:text-gray-900 transition flex items-center">
+                            View All
+                        </a>
+                    </div>
+
+                    <div class="relative flex-1">
+                        <!-- Timeline visual line -->
+                        <div class="absolute left-[39px] top-4 bottom-4 w-[2px] bg-gray-100 z-0 hidden sm:block"></div>
+                        <div id="transactionList"
+                            class="space-y-0 h-[400px] overflow-y-auto pr-2 relative z-10 custom-scrollbar">
+                            <!-- Transactions populated here via JS -->
+                            <div class="flex items-center justify-center h-full text-sm text-gray-500">Loading
+                                transactions...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Budget Overview (Right - 1 column span) -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[490px]">
+                    <div class="flex justify-between items-center mb-6 pt-1">
+                        <h3 class="text-lg font-semibold text-gray-900">Budget Overview</h3>
+                        <button onclick="document.getElementById('addBudgetModal').classList.remove('hidden')"
+                            class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
+                            <i class="ri-add-line mr-1 text-lg"></i> Add Budget
+                        </button>
+                    </div>
+
+                    <div class="relative flex-1 overflow-hidden">
+                        <!-- Right border scroll aesthetic -->
+                        <div class="absolute right-0 top-0 bottom-0 w-1 bg-gray-200 rounded-full z-0 hidden sm:block">
+                        </div>
+                        <div id="budgetOverviewList"
+                            class="space-y-6 overflow-y-auto h-full pr-4 relative z-10 custom-scrollbar">
+                            <!-- Budgets populated here -->
+                            <div class="flex items-center justify-center h-full text-sm text-gray-500">Loading
+                                budgets...</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Spending Analysis -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6">Spending Analysis</h3>
-            <div id="spendingChart" class="h-80"></div>
-            <div class="grid grid-cols-2 gap-6 mt-6">
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-md font-semibold text-gray-900 mb-4">Expense Breakdown by Category</h3>
-                    <div id="expensePieChart" class="h-60"></div>
+        <!-- 5️⃣ AI Insights & Upcoming Bills Section -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8 mt-2">
+            <!-- AI Insights (Left - 2 columns span) -->
+            <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">AI Insights</h3>
+                    <i class="ri-refresh-line text-gray-400 cursor-pointer hover:text-gray-700 transition"
+                        onclick="fetchAIInsights()" title="Refresh Insights"></i>
                 </div>
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <h3 class="text-md font-semibold text-gray-900 mb-4">Monthly Expenses Trend</h3>
-                    <div id="expenseBarChart" class="h-60"></div>
+                <div class="relative flex-1">
+                    <div id="aiInsightsBox"
+                        class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- AI insights populated here via JS -->
+                        <div
+                            class="col-span-2 flex items-center justify-center h-full text-sm font-medium text-gray-500 py-10 w-full">
+                            Loading insights...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Bills (Right - 1 column span) -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[400px]">
+                <div class="flex justify-between items-center mb-6 pt-1">
+                    <h3 class="text-lg font-semibold text-gray-900">Upcoming Bills</h3>
+                    <a href="/recurring-payments/"
+                        class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
+                        <i class="ri-add-line mr-1 text-lg"></i> Add Bill
+                    </a>
+                </div>
+                <div class="relative flex-1 overflow-hidden">
+                    <div id="billsList" class="space-y-4 overflow-y-auto h-full pr-2 relative z-10 custom-scrollbar">
+                        <!-- Bills populated here -->
+                        <div class="flex items-center justify-center h-full text-sm text-gray-500">Loading bills...
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Transactions -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6">Recent Transactions</h3>
-            <div id="transactionList" class="space-y-4"></div>
+        <!-- 6️⃣ Savings Goals Section -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Savings Goals</h3>
+                <button onclick="document.getElementById('addGoalModal').classList.remove('hidden')"
+                    class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
+                    <i class="ri-add-line mr-1 text-lg"></i> Add Goal
+                </button>
+            </div>
+            <div id="savingsGoalsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Savings goals populated here via JS -->
+                <div class="col-span-full flex items-center justify-center text-sm font-medium text-gray-500 py-10">
+                    Loading goals...</div>
+            </div>
         </div>
+    </div>
 
-        <!-- Upcoming Bills -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6">Upcoming Bills</h3>
-            <div id="billsList" class="space-y-4"></div>
+    <!-- Add Budget Modal -->
+    <div id="addBudgetModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-96 max-w-[90%] transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-900">Add New Budget</h3>
+                <button onclick="document.getElementById('addBudgetModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex flex-col items-center justify-center transition">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Category</label>
+            <select id="budgetCategory"
+                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl mb-5 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition appearance-none cursor-pointer">
+                <option value="" disabled selected>Select category</option>
+                <option value="Food">Food & Dining</option>
+                <option value="Transport">Transportation</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Budget Amount</label>
+            <div class="relative mb-8">
+                <span class="absolute left-4 top-3 text-gray-500 font-medium">₹</span>
+                <input type="number" id="budgetAmount"
+                    class="w-full p-3 pl-8 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition"
+                    placeholder="0.00" />
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="document.getElementById('addBudgetModal').classList.add('hidden')"
+                    class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button id="saveBudgetBtn"
+                    class="px-5 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-sm">Save
+                    Budget</button>
+            </div>
         </div>
+    </div>
 
-        <!-- AI Insights -->
-        <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-6">AI Insights</h3>
-            <div id="aiInsightsBox" class="p-4 bg-blue-50 rounded-lg"></div>
-        </div>
+    <!-- Add Goal Modal -->
+    <div id="addGoalModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity">
+        <div class="bg-white p-6 rounded-2xl shadow-xl w-96 max-w-[90%] transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-gray-900">Add New Goal</h3>
+                <button onclick="document.getElementById('addGoalModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex flex-col items-center justify-center transition">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
 
-        <!-- Savings Goals Tracker -->
-        <div class="p-6 bg-white shadow-lg rounded-lg">
-            <h3 class="font-semibold text-gray-800 mb-4">Savings Goals</h3>
-            <div id="savingsGoals" class="space-y-4"></div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Goal Title</label>
+            <input type="text" id="goalTitle"
+                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl mb-5 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition"
+                placeholder="e.g., Birthday present, Bike" />
+
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Target Amount</label>
+            <div class="relative mb-5">
+                <span class="absolute left-4 top-3 text-gray-500 font-medium">₹</span>
+                <input type="number" id="goalAmount"
+                    class="w-full p-3 pl-8 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition"
+                    placeholder="0.00" />
+            </div>
+
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Deadline</label>
+            <input type="date" id="goalDeadline"
+                class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl mb-8 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition" />
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="document.getElementById('addGoalModal').classList.add('hidden')"
+                    class="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button id="saveGoalBtn"
+                    class="px-5 py-2.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition shadow-sm">Save
+                    Goal</button>
+            </div>
         </div>
     </div>
 
@@ -188,7 +420,7 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Transaction</h3>
             <label class="block text-sm text-gray-700 mb-1">Amount</label>
             <input type="number" id="editAmount" class="w-full p-2 border rounded mb-3" />
-            
+
             <label class="block text-sm text-gray-700 mb-1">Category</label>
             <input type="text" id="editCategory" class="w-full p-2 border rounded mb-3" />
 
@@ -204,7 +436,8 @@
             </div>
         </div>
     </div>
-
-    <script src="main.js"></script>
+    </div>
+    <script src="{% static 'frontend/js/main.js' %}"></script>
 </body>
+
 </html>

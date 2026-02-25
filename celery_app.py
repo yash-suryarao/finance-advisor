@@ -26,4 +26,8 @@ app.conf.beat_schedule = {
         'task': 'payments.tasks.send_payment_reminders',
         'schedule': crontab(hour=9, minute=0),  # Run daily at 9 AM
     },
+    'send-bill-reminders': {
+        'task': 'notifications.tasks.send_bill_reminders',
+        'schedule': crontab(hour=8, minute=30), # Run daily at 8:30 AM
+    },
 }

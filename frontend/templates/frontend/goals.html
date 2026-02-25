@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,50 +9,83 @@
     <script src="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <header class="flex justify-between items-center mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Savings Goals</h1>
-                <p id="goalCount" class="text-gray-600 mt-1">Loading goals...</p>
-            </div>
-            <div class="relative">
-                <button onclick="toggleNotifications()" class="relative bg-primary text-white px-4 py-2 rounded-md">
-                    Notifications <span id="notifCount" class="absolute top-0 right-0 bg-red-500 text-xs text-white px-2 py-1 rounded-full hidden">0</span>
-                </button>
-                <div id="notifDropdown" class="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg hidden">
-                    <div id="notifList" class="p-4 text-sm text-gray-800"></div>
-                    <button onclick="markNotificationsRead()" class="w-full text-center py-2 text-primary border-t hover:bg-gray-100">Mark All Read</button>
+
+<body class="bg-gray-50 flex min-h-screen">
+    {% include 'frontend/sidebar.html' %}
+    <div class="flex-1 ml-20 flex flex-col min-w-0">
+        <div class="max-w-7xl mx-auto px-4 py-8 w-full">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Savings Goals</h1>
+                    <p id="goalCount" class="text-gray-600 mt-1">Loading goals...</p>
+                </div>
+                <div class="relative">
+                    <button onclick="toggleNotifications()" class="relative bg-primary text-white px-4 py-2 rounded-md">
+                        Notifications <span id="notifCount"
+                            class="absolute top-0 right-0 bg-red-500 text-xs text-white px-2 py-1 rounded-full hidden">0</span>
+                    </button>
+                    <div id="notifDropdown" class="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg hidden">
+                        <div id="notifList" class="p-4 text-sm text-gray-800"></div>
+                        <button onclick="markNotificationsRead()"
+                            class="w-full text-center py-2 text-primary border-t hover:bg-gray-100">Mark All
+                            Read</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Savings Assistant -->
+            <div class="bg-[#f8f9ff] rounded-xl p-8 shadow-sm mt-8 mb-8 border border-indigo-50">
+                <h2 class="text-xl font-semibold text-indigo-900 mb-6">Savings Assistant</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                    <!-- Left: Text Advice -->
+                    <div id="savingsAssistantInfo" class="flex flex-col justify-center">
+                        <h3 class="font-bold text-gray-900 mb-4">Monthly Savings Plan</h3>
+                        <p class="text-gray-700 leading-relaxed mb-6" id="savingsPlanText">
+                            Based on your spending patterns and profile, save ₹0.00/month
+                        </p>
+                        <div class="flex items-center text-green-600 font-medium">
+                            <i class="ri-checkbox-circle-fill mr-2 text-lg"></i>
+                            <span id="savingsTip">Diversify your investments</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Forecast Chart -->
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-full">
+                        <h3 class="font-semibold text-gray-900 mb-4">Savings Forecast</h3>
+                        <div id="savingsChart" class="flex-grow min-h-[250px] w-full"></div>
+
+                        <div class="flex justify-center space-x-2 mt-4" id="forecastButtons">
+                            <button
+                                class="forecast-btn bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-1.5 rounded-full text-sm font-medium transition"
+                                onclick="updateForecast(3)">3 Months</button>
+                            <button
+                                class="forecast-btn text-gray-600 hover:bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium transition"
+                                onclick="updateForecast(6)">6 Months</button>
+                            <button
+                                class="forecast-btn text-gray-600 hover:bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium transition"
+                                onclick="updateForecast(12)">12 Months</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </header>
 
-        <!-- AI Insights Panel -->
-        <div id="aiInsights" class="bg-white rounded-lg p-6 shadow-sm mb-6 hidden">
-            <h2 class="text-lg font-semibold text-blue-600">💡 AI Insights</h2>
-            <div id="insightsList" class="space-y-3 mt-3"></div>
-        </div>
+            <!-- Monthly Savings History Chart -->
+            <div class="bg-white rounded-lg p-6 shadow-sm mt-6">
+                <h2 class="text-lg font-semibold text-gray-900">📊 Monthly Savings Tracker</h2>
+                <div id="savingsHistoryChart" class="h-80"></div>
+            </div>
 
-        <!-- Monthly Savings Projection Chart -->
-        <div class="bg-white rounded-lg p-6 shadow-sm mt-6">
-            <h2 class="text-lg font-semibold text-gray-900">📊 Savings Projection</h2>
-            <div id="savingsChart" class="h-80"></div>
+            <!-- Savings Goals List -->
+            <div id="goalsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                <!-- Goals will be dynamically loaded here -->
+            </div>
         </div>
-
-        <!-- Monthly Savings History Chart -->
-        <div class="bg-white rounded-lg p-6 shadow-sm mt-6">
-            <h2 class="text-lg font-semibold text-gray-900">📊 Monthly Savings Tracker</h2>
-            <div id="savingsHistoryChart" class="h-80"></div>
-        </div>
-
-        <!-- Savings Goals List -->
-        <div id="goalsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            <!-- Goals will be dynamically loaded here -->
-        </div>
+    </div>
     </div>
 
     <script>
-        const API_BASE_URL = "https://your-django-api.com/api/insights/";
+        const API_BASE_URL = "/api/insights/";
 
         async function fetchGoals() {
             try {
@@ -83,19 +117,70 @@
             }
         }
 
+        let currentForecastChart = null;
+        let globalForecastData = { months: [], amounts: [] };
+
         async function fetchSavingsProjection() {
             try {
                 const res = await fetch(API_BASE_URL + "savings-projections/");
-                const data = await res.json();
+                globalForecastData = await res.json();
 
-                const chart = echarts.init(document.getElementById('savingsChart'));
-                chart.setOption({
-                    xAxis: { type: 'category', data: data.months },
-                    yAxis: { type: 'value' },
-                    series: [{ name: 'Projected Savings', type: 'line', data: data.amounts }]
-                });
+                // Initialize default view
+                updateForecast(0); // 0 means show all or default from backend
+
             } catch (error) {
                 console.error("Error fetching savings projections:", error);
+            }
+        }
+
+        function updateForecast(monthsSlice) {
+            let displayMonths = globalForecastData.months;
+            let displayAmounts = globalForecastData.amounts;
+
+            if (monthsSlice > 0) {
+                // Mock frontend slicing for demo
+                displayMonths = globalForecastData.months.slice(0, monthsSlice);
+                displayAmounts = globalForecastData.amounts.slice(0, monthsSlice);
+            }
+
+            const expectedSavings = displayAmounts[displayAmounts.length - 1] || 0;
+            const formattedGoal = expectedSavings.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+            document.getElementById('savingsPlanText').innerText =
+                `Based on your spending patterns, Based on your profile, save ₹${formattedGoal}/month (30.0% of income)`;
+
+            if (!currentForecastChart) {
+                currentForecastChart = echarts.init(document.getElementById('savingsChart'));
+                window.addEventListener('resize', () => currentForecastChart.resize());
+            }
+
+            currentForecastChart.setOption({
+                grid: { top: 20, right: 20, bottom: 20, left: 50 },
+                xAxis: { type: 'category', data: displayMonths, boundaryGap: false },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f3f4f6' } } },
+                series: [{
+                    name: 'Projected Savings',
+                    type: 'line',
+                    data: displayAmounts,
+                    smooth: true,
+                    itemStyle: { color: '#4CAF50' },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(76, 175, 80, 0.3)' },
+                            { offset: 1, color: 'rgba(76, 175, 80, 0.0)' }
+                        ])
+                    }
+                }]
+            });
+
+            // Update button styles
+            if (monthsSlice > 0) {
+                document.querySelectorAll('.forecast-btn').forEach(btn => {
+                    if (parseInt(btn.innerText) === monthsSlice) {
+                        btn.className = "forecast-btn bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-1.5 rounded-full text-sm font-medium transition";
+                    } else {
+                        btn.className = "forecast-btn text-gray-600 hover:bg-gray-100 px-4 py-1.5 rounded-full text-sm font-medium transition";
+                    }
+                });
             }
         }
 
@@ -161,4 +246,5 @@
         fetchNotifications();
     </script>
 </body>
+
 </html>

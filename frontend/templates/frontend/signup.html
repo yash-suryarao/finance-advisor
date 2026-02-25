@@ -51,20 +51,22 @@
                 <form id="signupForm" class="space-y-6" method="POST">
                     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                     <div>
-      </div>        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                        <input type="text" name="full_name" class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" name="full_name"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                             placeholder="Enter your full name" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                        <input type="email" name="email" class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        <input type="email" name="email"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                             placeholder="Enter your email" required>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
                         <input type="password" id="password" name="password"
                             class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                            placeholder="Create a strong password" required>
+                            placeholder="Create a strong password" required onkeyup="checkPasswordStrength()">
                         <div class="password-strength-meter mt-2">
                             <div id="strengthMeter" class="bg-gray-200"></div>
                         </div>
@@ -72,7 +74,8 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                        <input type="tel" name="phone_number" class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                        <input type="tel" name="phone_no"
+                            class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                             placeholder="Enter your phone number" required>
                     </div>
                     <div>
@@ -81,21 +84,125 @@
                             class="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                             placeholder="Confirm your password" required>
                     </div>
-                    <div class="flex items-start">
+                    <!-- <div class="flex items-start">
                         <input type="checkbox" id="terms" class="h-4 w-4 text-indigo-600 border-gray-300 rounded"
                             required>
                         <label for="terms" class="ml-2 text-sm text-gray-600">I agree to the <a href="#"
                                 class="text-purple-600 hover:text-purple-500">Terms of Service</a> and <a href="#"
                                 class="text-purple-600 hover:text-purple-500">Privacy Policy</a></label>
-                    </div>
+                    </div> -->
                     <button type="submit"
                         class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-500 transition-colors font-medium">Create
                         Account</button>
                 </form>
-                <p class="mt-6 text-center text-sm text-gray-600">Already have an account? <a href="{% url 'login_view' %}" class="text-purple-600 hover:text-purple-500 font-medium">Sign in</a></p>
+                <p class="mt-6 text-center text-sm text-gray-600">Already have an account? <a href="{% url 'login' %}"
                         class="text-purple-600 hover:text-purple-500 font-medium">Sign in</a></p>
+                <p id="errorMessage" class="text-red-500 text-sm mt-4 hidden"></p>
+                <p id="successMessage" class="text-green-500 text-sm mt-4 hidden"></p>
             </div>
         </div>
     </div>
-    </body>
-    </html>
+    <script>
+        function checkPasswordStrength() {
+            var val = document.getElementById("password").value;
+            var meter = document.getElementById("strengthMeter");
+            var text = document.getElementById("passwordStrength");
+            var strength = 0;
+
+            if (val.length > 5) strength += 1;
+            if (val.length > 7) strength += 1;
+            if (val.match(/[A-Z]/)) strength += 1;
+            if (val.match(/[0-9]/)) strength += 1;
+            if (val.match(/[^a-zA-Z\d]/)) strength += 1;
+
+            meter.classList.remove("bg-gray-200", "bg-red-500", "bg-yellow-500", "bg-green-500", "bg-green-600");
+
+            if (val.length == 0) {
+                meter.style.width = "0%";
+                meter.classList.add("bg-gray-200");
+                text.innerHTML = "Password strength: Too weak";
+            } else if (strength < 2) {
+                meter.style.width = "20%";
+                meter.classList.add("bg-red-500");
+                text.innerHTML = "Password strength: Weak";
+            } else if (strength == 2) {
+                meter.style.width = "40%";
+                meter.classList.add("bg-yellow-500");
+                text.innerHTML = "Password strength: Fair";
+            } else if (strength == 3) {
+                meter.style.width = "60%";
+                meter.classList.add("bg-yellow-500");
+                text.innerHTML = "Password strength: Good";
+            } else if (strength == 4) {
+                meter.style.width = "80%";
+                meter.classList.add("bg-green-500");
+                text.innerHTML = "Password strength: Strong";
+            } else {
+                meter.style.width = "100%";
+                meter.classList.add("bg-green-600");
+                text.innerHTML = "Password strength: Very Strong";
+            }
+        }
+
+        document.getElementById('signupForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const full_name = document.querySelector('input[name="full_name"]').value;
+            const email = document.querySelector('input[name="email"]').value;
+            const password = document.getElementById('password').value;
+            const confirm_password = document.getElementById('confirmPassword').value;
+            const phone_no = document.querySelector('input[name="phone_no"]').value;
+
+            if (password !== confirm_password) {
+                document.getElementById('errorMessage').textContent = "Passwords do not match.";
+                document.getElementById('errorMessage').classList.remove('hidden');
+                return;
+            }
+
+            const response = await fetch('/users/signup/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name, email, password, phone_no })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('errorMessage').classList.add('hidden');
+                document.getElementById('successMessage').textContent = "Signup successful! Logging you in...";
+                document.getElementById('successMessage').classList.remove('hidden');
+
+                // Auto-login newly registered user
+                try {
+                    const loginResponse = await fetch('/api/token/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    if (loginResponse.ok) {
+                        const loginData = await loginResponse.json();
+                        localStorage.setItem('access_token', loginData.access);
+                        localStorage.setItem('refresh_token', loginData.refresh);
+                        setTimeout(() => window.location.href = "/dashboard/", 1000);
+                    } else {
+                        // Fallback to login page if auto-login fails
+                        setTimeout(() => window.location.href = "/", 1500);
+                    }
+                } catch (error) {
+                    setTimeout(() => window.location.href = "/", 1500);
+                }
+            } else {
+                document.getElementById('successMessage').classList.add('hidden');
+                let errStr = "";
+                for (const [key, val] of Object.entries(data)) {
+                    errStr += `${key}: ${val} `;
+                }
+                document.getElementById('errorMessage').textContent = errStr || "Signup failed.";
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>

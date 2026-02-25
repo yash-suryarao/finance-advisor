@@ -14,6 +14,8 @@ class BudgetSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     
     class Meta:
+        model = Category
+        fields = '__all__'
         unique_together = ('user', 'name')  
 
 
@@ -25,7 +27,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ['id', 'date', 'category', 'category_name', 'currency','amount', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'date', 'category', 'category_type', 'category_name', 'currency','amount', 'description', 'created_at', 'updated_at']
 
 class BudgetHistorySerializer(serializers.ModelSerializer):
     class Meta:

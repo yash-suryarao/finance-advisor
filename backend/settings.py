@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-%5w*&iy%bmgsd#f^_cxlpm25sh-6f@a&1si+^-1f1$@gz_awuj
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -49,13 +49,13 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_beat',
     'users',
-    #'transactions',
-   # 'payments',
+    'transactions',
+    'payments',
     'group_expenses',
-   # 'notifications',
-   # "insights",
-   # 'admin_dashboard',
-   # 'frontend',
+    'notifications',
+    'insights',
+    'admin_dashboard',
+    'frontend',
   
 ]
 
@@ -135,12 +135,8 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'finance_tracker',
-        'USER': 'postgres',
-        'PASSWORD': 'suga',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -189,4 +185,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'login'
 
