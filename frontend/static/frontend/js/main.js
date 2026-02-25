@@ -18,10 +18,12 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    voiceEntryBtn.addEventListener('click', () => {
-        recognition.start();
-        alert("Listening... Speak your transaction details.");
-    });
+    if (voiceEntryBtn) {
+        voiceEntryBtn.addEventListener('click', () => {
+            recognition.start();
+            alert("Listening... Speak your transaction details.");
+        });
+    }
 
     recognition.onresult = async (event) => {
         const voiceText = event.results[0][0].transcript;
@@ -64,35 +66,39 @@ if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 }
 
 // Handle transaction save
-saveTransactionBtn.addEventListener('click', async () => {
-    const transactionData = {
-        amount: parseFloat(editAmount.value),
-        transaction_type: editType.value,
-        category: editCategory.value
-    };
+if (saveTransactionBtn) {
+    saveTransactionBtn.addEventListener('click', async () => {
+        const transactionData = {
+            amount: parseFloat(editAmount.value),
+            transaction_type: editType.value,
+            category: editCategory.value
+        };
 
-    const response = await fetch('/api/transactions/confirm-voice-transaction/', {
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders
-        },
-        body: JSON.stringify(transactionData)
+        const response = await fetch('/api/transactions/confirm-voice-transaction/', {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                ...authHeaders
+            },
+            body: JSON.stringify(transactionData)
+        });
+
+        const result = await response.json();
+
+        if (result.message) {
+            alert("Transaction saved successfully!");
+            transactionModal.classList.add('hidden');
+        } else {
+            alert("Error saving transaction.");
+        }
     });
+}
 
-    const result = await response.json();
-
-    if (result.message) {
-        alert("Transaction saved successfully!");
+if (cancelTransactionBtn) {
+    cancelTransactionBtn.addEventListener('click', () => {
         transactionModal.classList.add('hidden');
-    } else {
-        alert("Error saving transaction.");
-    }
-});
-
-cancelTransactionBtn.addEventListener('click', () => {
-    transactionModal.classList.add('hidden');
-});
+    });
+}
 
 // Fetch User Data from API
 
@@ -111,9 +117,11 @@ async function fetchUserProfile() {
 
 
 // Toggle User Dropdown Menu
-document.getElementById('userDropdownBtn').addEventListener('click', () => {
-    document.getElementById('userDropdown').classList.toggle('hidden');
-});
+if (document.getElementById('userDropdownBtn')) {
+    document.getElementById('userDropdownBtn').addEventListener('click', () => {
+        document.getElementById('userDropdown').classList.toggle('hidden');
+    });
+}
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (event) => {
@@ -280,7 +288,8 @@ async function fetchTransactions() {
             let amountClass = "text-red-600"; // Default to expense
 
             // Categorizing transactions
-            switch (transaction.category_name.toLowerCase()) {
+            const catName = transaction.category_name || "Other";
+            switch (catName.toLowerCase()) {
                 case "salary":
                     iconClass = "ri-bank-line text-green-600";
                     bgClass = "bg-green-100";
@@ -602,10 +611,12 @@ async function fetchUserNotifications() {
 }
 
 // Show/Hide Notifications
-document.getElementById('notificationBtn').addEventListener('click', () => {
-    document.getElementById('notificationDropdown').classList.toggle('hidden');
-    fetchUserNotifications();
-});
+if (document.getElementById('notificationBtn')) {
+    document.getElementById('notificationBtn').addEventListener('click', () => {
+        document.getElementById('notificationDropdown').classList.toggle('hidden');
+        fetchUserNotifications();
+    });
+}
 
 fetchUserNotifications(); // Load on page load
 
@@ -613,7 +624,7 @@ fetchUserNotifications(); // Load on page load
 // Fetch Budgets for Dashboard
 async function fetchBudgets() {
     try {
-        const response = await fetch('/api/budget/', { headers: authHeaders });
+        const response = await fetch('/api/transactions/budget/', { headers: authHeaders });
         if (!response.ok) return;
         const data = await response.json();
         const budgetList = document.getElementById('budgetOverviewList');
@@ -668,7 +679,7 @@ if (document.getElementById('saveBudgetBtn')) {
         }
 
         try {
-            const res = await fetch('/api/budget/create/', {
+            const res = await fetch('/api/transactions/budget/', {
                 method: 'POST',
                 headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken'), ...authHeaders },
                 body: JSON.stringify({ category, limit_amount: amount })

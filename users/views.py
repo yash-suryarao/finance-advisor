@@ -146,10 +146,15 @@ def user_profile(request):
     full_name = f"{user.first_name} {user.last_name}".strip()
     display_name = full_name if full_name else user.username
 
+    # Safely retrieve avatar URL
+    avatar_url = "https://via.placeholder.com/100"
+    if profile and hasattr(profile, 'avatar') and profile.avatar and profile.avatar.name:
+        avatar_url = request.build_absolute_uri(profile.avatar.url)
+
     profile_data = {
         "id": user.id,
         "username": display_name,
-        "avatar": request.build_absolute_uri(user.profile.avatar.url) if user.profile and user.profile.avatar and user.profile.avatar.name else "https://via.placeholder.com/100"
+        "avatar": avatar_url
     }
     return JsonResponse(profile_data)
 

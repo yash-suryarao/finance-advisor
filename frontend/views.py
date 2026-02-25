@@ -59,21 +59,36 @@ def financial_summary(request):
 
     today = datetime.today()
     current_month = today.month
-    last_month = (today - timedelta(days=30)).month
+    current_year = today.year
+    
+    # Calculate exactly one month ago
+    last_month_date = today.replace(day=1) - timedelta(days=1)
+    last_month = last_month_date.month
+    last_month_year = last_month_date.year
 
-    total_balance = Transaction.objects.filter(user=user).aggregate(Sum('amount'))['amount__sum'] or 0
+    # Helper function to get net balance (Income - Expense)
+    def get_net_balance(qs):
+        income = qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
+        expense = qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
+        return float(income) - float(expense)
 
-    monthly_income = Transaction.objects.filter(user=user, category_type="income", date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    # Total Balance (All time)
+    total_balance = get_net_balance(Transaction.objects.filter(user=user))
 
-    monthly_expenses = Transaction.objects.filter(user=user, category_type="expense", date__month=current_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    # Current Month
+    current_month_qs = Transaction.objects.filter(user=user, date__year=current_year, date__month=current_month)
+    monthly_income = current_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
+    monthly_expenses = current_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
 
-    last_month_balance = Transaction.objects.filter(user=user, date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 1
-    balance_change = round(((total_balance - last_month_balance) / last_month_balance) * 100, 2) if last_month_balance else 0
+    # Last Month
+    last_month_qs = Transaction.objects.filter(user=user, date__year=last_month_year, date__month=last_month)
+    last_month_balance = get_net_balance(Transaction.objects.filter(user=user, date__lte=last_month_date)) or 1
+    balance_change = round(((total_balance - last_month_balance) / abs(last_month_balance)) * 100, 2) if last_month_balance else 0
 
-    last_month_income = Transaction.objects.filter(user=user, category_type="income", date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    last_month_income = last_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
     income_change = round(((monthly_income - last_month_income) / last_month_income) * 100, 2) if last_month_income else 0
 
-    last_month_expenses = Transaction.objects.filter(user=user, category_type="expense", date__month=last_month).aggregate(Sum('amount'))['amount__sum'] or 0
+    last_month_expenses = last_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
     expense_change = round(((monthly_expenses - last_month_expenses) / last_month_expenses) * 100, 2) if last_month_expenses else 0
 
     # Explicit Savings Calculation
@@ -169,18 +184,28 @@ def spending_analysis(request):
     monthly_totals = [entry['total'] for entry in monthly_expenses]
 
     # Monthly expense & income trend for 6 months (Income vs Expenses Bar Chart)
+    # Note: THIS SHOULD ALWAYS use the full base query (all records) or else old records 
+    # are hidden by the 'start_date' period filter above it!
+    base_transactions = Transaction.objects.filter(user_id=user_id)
+    
     last_6_months = []
+    # Build a stable month-by-month list
     for i in range(5, -1, -1):
-        d = today - timedelta(days=i*30)
-        last_6_months.append((d.year, d.month, d.strftime('%b %Y')))
+        target_date = today.replace(day=1) - timedelta(days=i*30)
+        # Fix date math slightly to get correct year/month pairs jumping back
+        month = (today.month - 1 - i) % 12 + 1
+        year = today.year + ((today.month - 1 - i) // 12)
+        import calendar
+        month_abbr = calendar.month_abbr[month]
+        last_6_months.append((year, month, f"{month_abbr} {year}"))
 
     bar_months = []
     bar_income = []
     bar_expenses = []
 
     for year, month, label in last_6_months:
-        inc = transactions.filter(category_type="income", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
-        exp = transactions.filter(category_type="expense", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
+        inc = base_transactions.filter(category_type="income", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
+        exp = base_transactions.filter(category_type="expense", date__year=year, date__month=month).aggregate(total=Sum('amount'))['total'] or 0
         if label not in bar_months:  # prevent duplicate months if days overlap month boundaries
             bar_months.append(label)
             bar_income.append(float(inc))

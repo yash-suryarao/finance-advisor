@@ -319,7 +319,7 @@ class BudgetView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return TransactionsBudget.objects.filter(user=self.request.user)
+        return Budget.objects.filter(user=self.request.user)
 
 
 class BudgetHistoryView(generics.ListAPIView):
@@ -327,30 +327,9 @@ class BudgetHistoryView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return TransactionsBudgetHistory.objects.filter(
+        return BudgetHistory.objects.filter(
             user=self.request.user, 
             month=self.request.query_params.get('month'), 
             year=self.request.query_params.get('year')
         )
 
-
-
-
-class BudgetView(generics.ListCreateAPIView):
-    serializer_class = BudgetSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return TransactionsBudget.objects.filter(user_id=self.kwargs['user_id'])
-
-# Fetch budget history
-class BudgetHistoryView(generics.ListAPIView):
-    serializer_class = BudgetHistorySerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return TransactionsBudgetHistory.objects.filter(
-            user_id=self.kwargs['user_id'], 
-            month=self.request.query_params.get('month'), 
-            year=self.request.query_params.get('year')
-        )
