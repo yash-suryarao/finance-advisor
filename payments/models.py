@@ -18,18 +18,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.amount}"
 
-class Subscription(models.Model):
-    subscription_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,)
-    razorpay_subscription_id = models.CharField(max_length=255)
-    plan = models.CharField(max_length=255)
-    status = models.CharField(max_length=50, default='active')
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.email} - {self.plan}"
 
 
 

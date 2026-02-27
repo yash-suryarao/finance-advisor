@@ -17,11 +17,9 @@ permission_classes = [IsAdminUser]
 @api_view(['GET'])
 def user_statistics(request):
     total_users = User.objects.count()
-    premium_users = User.objects.filter(is_premium=True).count()
 
     data = {
         "total_users": total_users,
-        "premium_users": premium_users,
     }
     serializer = UserCountSerializer(data)
     return Response(serializer.data)

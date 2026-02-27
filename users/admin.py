@@ -9,7 +9,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'occupation', 'annual_income', 'subscription_plan']
+    list_display = ['user', 'occupation', 'annual_income']
 
 @admin.register(FinancialData)
 class FinancialDataAdmin(admin.ModelAdmin):

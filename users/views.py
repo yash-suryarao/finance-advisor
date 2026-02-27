@@ -163,16 +163,13 @@ def user_profile(request):
 @permission_classes([IsAuthenticated])
 def user_notifications(request):
     """
-    Fetch notifications for the authenticated user.
     - If recipient is 'all', fetch for all users.
-    - If recipient is 'premium' or 'free', fetch based on user's subscription.
     - If recipient is a specific user, fetch only for that user.
     """
     user = request.user
-    subscription_type = "premium" if user.is_premium else "free"  # Determine subscription type based on `is_premium` field
 
     notifications = Notification.objects.filter(
-        recipients__in=["all", subscription_type, str(user.id)]
+        recipients__in=["all", str(user.id)]
     ).order_by('-timestamp')
 
     notifications_list = [

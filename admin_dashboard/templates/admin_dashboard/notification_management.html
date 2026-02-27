@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+
 <body class="bg-gray-50 min-h-screen">
 
     <!-- Toast Notification -->
@@ -21,19 +22,19 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Recipient</label>
                     <select id="recipient" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
                         <option value="all">All Users</option>
-                        <option value="premium">Premium Users</option>
-                        <option value="free">Free Users</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
-                    <input type="text" id="title" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Enter notification title">
+                    <input type="text" id="title" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
+                        placeholder="Enter notification title">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                    <textarea id="message" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg" placeholder="Enter your message"></textarea>
+                    <textarea id="message" rows="4" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
+                        placeholder="Enter your message"></textarea>
                 </div>
 
                 <div class="flex justify-end">
@@ -46,7 +47,8 @@
 
         <!-- Search & Filter Bar -->
         <div class="mb-6 flex flex-col sm:flex-row justify-between gap-4">
-            <input type="text" id="search" placeholder="Search notifications..." class="px-4 py-2 border rounded-lg w-full sm:w-1/3">
+            <input type="text" id="search" placeholder="Search notifications..."
+                class="px-4 py-2 border rounded-lg w-full sm:w-1/3">
             <select id="statusFilter" class="px-4 py-2 border rounded-lg w-full sm:w-1/4">
                 <option value="">All Status</option>
                 <option value="sent">Sent</option>
@@ -113,16 +115,16 @@
                 headers: { "Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token }}" },
                 body: JSON.stringify({ recipient, title, message })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showToast(data.error);
-                } else {
-                    showToast("Notification sent successfully");
-                    location.reload();
-                }
-            })
-            .catch(error => console.error("Error:", error));
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showToast(data.error);
+                    } else {
+                        showToast("Notification sent successfully");
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error("Error:", error));
         }
 
         function showToast(message) {
