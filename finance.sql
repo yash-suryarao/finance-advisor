@@ -3,7 +3,6 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     phone_no VARCHAR(15),
-    is_premium BOOLEAN DEFAULT FALSE,
     role VARCHAR(50) DEFAULT 'user',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -118,7 +117,7 @@ CREATE TABLE notifications (
     title VARCHAR(255) NOT NULL,
     message TEXT NOT NULL,
     status VARCHAR(50) DEFAULT 'unread',
-    recipients VARCHAR(10) CHECK (recipients IN ('all', 'premium', 'free')) NOT NULL DEFAULT 'all',
+    recipients VARCHAR(10) CHECK (recipients IN ('all')) NOT NULL DEFAULT 'all',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -130,8 +129,6 @@ CREATE INDEX idx_notifications_recipients ON notifications(recipients);
 CREATE TABLE payments (
     payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    razorpay_order_id VARCHAR(255) NOT NULL,
-    razorpay_payment_id VARCHAR(255),
     amount NUMERIC(15, 2) NOT NULL,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -141,19 +138,6 @@ CREATE INDEX idx_payments_user_id ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 
 
-CREATE TABLE subscriptions (
-    subscription_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    razorpay_subscription_id VARCHAR(255) NOT NULL,
-    plan VARCHAR(255) NOT NULL,
-    status VARCHAR(50) DEFAULT 'active',
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
-CREATE INDEX idx_subscriptions_status ON subscriptions(status);
 
 CREATE TABLE activity_logs (
     activity_log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -199,7 +183,7 @@ BEGIN
         AND tablename IN (
             'users', 'transactions', 'categories', 'budgets', 'groups', 
             'group_members', 'group_expenses', 'settlements', 'insights', 
-            'savings_goals', 'notifications', 'payments', 'subscriptions', 
+            'savings_goals', 'notifications', 'payments', 
             'activity_logs', 'admin_settings'
         )
     LOOP
@@ -211,25 +195,3 @@ BEGIN
         ', table_name);
     END LOOP;
 END $$;
-
--- Insert a user
-INSERT INTO users (email, password, phone_no)
-VALUES ('john.doe@example.com', 'password123',  '+1234567890');
-
--- Insert a transaction
-INSERT INTO transactions (user_id, amount, description, category, date)
-VALUES (
-    (SELECT user_id FROM users WHERE email = 'john.doe@example.com'),
-    100.50,
-    'Groceries',
-    'Food',
-    '2023-10-01'
-);
-
--- Insert a category
-INSERT INTO categories (user_id, name, type)
-VALUES (
-    (SELECT user_id FROM users WHERE email = 'john.doe@example.com'),
-    'Groceries',
-    'expense'
-);

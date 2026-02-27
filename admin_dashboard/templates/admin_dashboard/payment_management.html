@@ -51,11 +51,12 @@
         <!-- Filters & Export -->
         <div class="flex flex-wrap items-center justify-between mb-4">
             <div class="flex gap-4">
-                <input type="text" id="search" placeholder="Search payments..." class="px-4 py-2 border rounded" value="{{ search_query }}">
+                <input type="text" id="search" placeholder="Search payments..." class="px-4 py-2 border rounded"
+                    value="{{ search_query }}">
                 <select id="statusFilter" class="px-4 py-2 border rounded">
                     <option value="">All Status</option>
-                    <option value="COMPLETED" {% if status_filter == "COMPLETED" %}selected{% endif %}>Completed</option>
-                    <option value="PENDING" {% if status_filter == "PENDING" %}selected{% endif %}>Pending</option>
+                    <option value="COMPLETED" {% if status_filter=="COMPLETED" %}selected{% endif %}>Completed</option>
+                    <option value="PENDING" {% if status_filter=="PENDING" %}selected{% endif %}>Pending</option>
                 </select>
                 <button class="px-4 py-2 bg-blue-500 text-white rounded" id="refreshBtn">Refresh</button>
             </div>
@@ -68,7 +69,6 @@
                 <thead>
                     <tr class="text-left text-sm text-gray-500 border-b">
                         <th class="px-6 py-4 font-medium">User</th>
-                        <th class="px-6 py-4 font-medium">Razorpay Order ID</th>
                         <th class="px-6 py-4 font-medium">Amount</th>
                         <th class="px-6 py-4 font-medium">Status</th>
                         <th class="px-6 py-4 font-medium">Date</th>
@@ -78,9 +78,9 @@
                     {% for payment in payments %}
                     <tr class="border-b text-sm">
                         <td class="px-6 py-4">{{ payment.user.username }}</td>
-                        <td class="px-6 py-4">{{ payment.razorpay_order_id }}</td>
                         <td class="px-6 py-4">${{ payment.amount }}</td>
-                        <td class="px-6 py-4 {% if payment.status == 'COMPLETED' %}text-green-500{% else %}text-yellow-500{% endif %}">
+                        <td
+                            class="px-6 py-4 {% if payment.status == 'COMPLETED' %}text-green-500{% else %}text-yellow-500{% endif %}">
                             {{ payment.status }}
                         </td>
                         <td class="px-6 py-4">{{ payment.created_at|date:"Y-m-d H:i" }}</td>
@@ -97,7 +97,8 @@
         <!-- Pagination -->
         <div class="flex justify-between items-center mt-4">
             {% if payments.has_previous %}
-            <a href="?page={{ payments.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="px-4 py-2 bg-gray-300 rounded">Previous</a>
+            <a href="?page={{ payments.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}"
+                class="px-4 py-2 bg-gray-300 rounded">Previous</a>
             {% else %}
             <span class="px-4 py-2 bg-gray-200 rounded opacity-50 cursor-not-allowed">Previous</span>
             {% endif %}
@@ -105,7 +106,8 @@
             <span>Page {{ payments.number }} of {{ payments.paginator.num_pages }}</span>
 
             {% if payments.has_next %}
-            <a href="?page={{ payments.next_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="px-4 py-2 bg-gray-300 rounded">Next</a>
+            <a href="?page={{ payments.next_page_number }}&search={{ search_query }}&status={{ status_filter }}"
+                class="px-4 py-2 bg-gray-300 rounded">Next</a>
             {% else %}
             <span class="px-4 py-2 bg-gray-200 rounded opacity-50 cursor-not-allowed">Next</span>
             {% endif %}
@@ -116,52 +118,52 @@
 <!-- Chart.js Script -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    // Parse JSON safely
-    const months = JSON.parse(`{% autoescape off %}{{ months|safe }}{% endautoescape %}`);
-    const revenueData = JSON.parse(`{% autoescape off %}{{ revenue_data|safe }}{% endautoescape %}`);
+    document.addEventListener("DOMContentLoaded", function () {
+        // Parse JSON safely
+        const months = JSON.parse(`{% autoescape off %}{{ months|safe }}{% endautoescape %}`);
+        const revenueData = JSON.parse(`{% autoescape off %}{{ revenue_data|safe }}{% endautoescape %}`);
 
-    // Revenue Chart
-    const ctx = document.getElementById("revenueChart").getContext("2d");
-    new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: months,
-            datasets: [{
-                label: "Revenue",
-                data: revenueData,
-                backgroundColor: "rgba(54, 162, 235, 0.2)",
-                borderColor: "rgba(54, 162, 235, 1)",
-                borderWidth: 2,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
+        // Revenue Chart
+        const ctx = document.getElementById("revenueChart").getContext("2d");
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: months,
+                datasets: [{
+                    label: "Revenue",
+                    data: revenueData,
+                    backgroundColor: "rgba(54, 162, 235, 0.2)",
+                    borderColor: "rgba(54, 162, 235, 1)",
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
             }
-        }
-    });
+        });
 
-    // Search & Filter Event Listeners
-    document.getElementById("search").addEventListener("input", function () {
-        console.log("Search:", this.value);
-    });
+        // Search & Filter Event Listeners
+        document.getElementById("search").addEventListener("input", function () {
+            console.log("Search:", this.value);
+        });
 
-    document.getElementById("statusFilter").addEventListener("change", function () {
-        console.log("Filter:", this.value);
-    });
+        document.getElementById("statusFilter").addEventListener("change", function () {
+            console.log("Filter:", this.value);
+        });
 
-    document.getElementById("exportBtn").addEventListener("click", function () {
-        window.location.href = "{% url 'export_payments' %}";
-    });
+        document.getElementById("exportBtn").addEventListener("click", function () {
+            window.location.href = "{% url 'export_payments' %}";
+        });
 
-    document.getElementById("refreshBtn").addEventListener("click", function () {
-        location.reload();
+        document.getElementById("refreshBtn").addEventListener("click", function () {
+            location.reload();
+        });
     });
-});
 </script>
 
 {% endblock %}

@@ -62,8 +62,6 @@ INSTALLED_APPS = [
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'financetracker@gmail.com'
 
-RAZORPAY_KEY_ID = "rzp_test_RcJak5fcO3zfR9"
-RAZORPAY_KEY_SECRET = "ul8MqhYAbfpeikySEmq7vr6B"
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']

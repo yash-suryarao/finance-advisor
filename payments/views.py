@@ -1,4 +1,4 @@
-import razorpay
+
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -7,7 +7,6 @@ from rest_framework import status
 from .models import Payment
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
-from .utils import razorpay_client
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions
 from .models import RecurringPayment
@@ -15,8 +14,6 @@ from .serializers import RecurringPaymentSerializer
 from celery import shared_task
 from django.utils.timezone import now
 from notifications.models import Notification
-# Initialize Razorpay Client
-razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
 
 
 

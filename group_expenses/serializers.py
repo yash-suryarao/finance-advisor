@@ -23,4 +23,4 @@ class GroupMemberSerializer(serializers.ModelSerializer):
 class SettlementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Settlement
-        fields = ['id', 'group', 'payer', 'payee', 'amount', 'razorpay_payment_id', 'is_settled', 'settled_at']
+        fields = ['id', 'group', 'member', 'amount', 'settled']
