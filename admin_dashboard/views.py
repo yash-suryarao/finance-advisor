@@ -39,8 +39,7 @@ def admin_dashboard(request):
         payments = payments.filter(created_at__range=[filters["start_date"], filters["end_date"]])
 
     # Apply User Type Filter
-    if filters.get("user_type", "") != "":
-        users = users.filter(is_premium=filters["user_type"])
+    # Removed as is_premium no longer exists
 
     # Apply Transaction Type Filter
     if filters.get("transaction_type"):
@@ -67,7 +66,7 @@ def admin_dashboard(request):
     revenue_values = [float(item['total']) if item['total'] else 0 for item in revenue_data]
 
     # User Distribution Data
-    user_distribution = list(users.values('is_premium').annotate(count=Count('id')))
+    user_distribution = []
 
     # Transactions by Category
     transaction_data = list(transactions.values('category_type').annotate(total=Count('id')))

@@ -10,7 +10,6 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone_no = models.CharField(max_length=15, blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True, null=True)
-    is_premium = models.BooleanField(default=False)
     
     # Role-Based Fields
     ROLE_CHOICES = (
@@ -37,10 +36,10 @@ class FinancialData(models.Model):
     monthly_income_freelance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     monthly_income_other = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
-    rent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    bills = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    loans = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    subscriptions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # rent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # bills = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # loans = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # subscriptions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     savings_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     savings_stocks = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -57,9 +56,9 @@ class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatar/', blank=True, null=True)
     preferred_currency = models.CharField(max_length=3, choices=[
-        ('USD', 'USD'),
+        # ('USD', 'USD'),
         ('INR', 'INR'),
-        ('EUR', 'EUR')
+        # ('EUR', 'EUR')
     ], default='INR')
     date_of_birth = models.DateField(null=True, blank=True)
     occupation = models.CharField(max_length=20, choices=[
@@ -85,10 +84,10 @@ class Profile(models.Model):
         ('Medium', 'Medium'),
         ('High', 'High')
     ])
-    subscription_plan = models.CharField(max_length=10, choices=[
-        ('Free', 'Free'),
-        ('Premium', 'Premium')
-    ])
+    # subscription_plan = models.CharField(max_length=10, choices=[
+    #     ('Free', 'Free'),
+    #     ('Premium', 'Premium')
+    # ])
 
     def __str__(self):
         return f"{self.user.username} - {self.financial_goal}"

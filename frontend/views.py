@@ -66,53 +66,96 @@ def financial_summary(request):
     last_month = last_month_date.month
     last_month_year = last_month_date.year
 
-    # Helper function to get net balance (Income - Expense)
     def get_net_balance(qs):
         income = qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
         expense = qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
         return float(income) - float(expense)
 
+    def calc_progress(current, target):
+        if target == 0:
+            if current == 0:
+                return 0.00
+            elif current > 0:
+                return 100.00
+            else:
+                return -100.00
+        return round((float(current) / abs(target)) * 100, 2)
+
+    total_transactions_count = Transaction.objects.filter(user=user).count()
+
     # Total Balance (All time)
     total_balance = get_net_balance(Transaction.objects.filter(user=user))
+    total_income = float(Transaction.objects.filter(user=user, category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0)
+    balance_change = round((total_balance / total_income) * 100, 2) if total_income > 0 else 0.00
 
-    # Current Month
+    # Current Month Actuals
     current_month_qs = Transaction.objects.filter(user=user, date__year=current_year, date__month=current_month)
-    monthly_income = current_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
-    monthly_expenses = current_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
+    monthly_income = float(current_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0)
+    monthly_expenses = float(current_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0)
 
-    # Last Month
+    # Last Month Baseline
     last_month_qs = Transaction.objects.filter(user=user, date__year=last_month_year, date__month=last_month)
-    last_month_balance = get_net_balance(Transaction.objects.filter(user=user, date__lte=last_month_date)) or 1
-    balance_change = round(((total_balance - last_month_balance) / abs(last_month_balance)) * 100, 2) if last_month_balance else 0
+    last_month_income = float(last_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0)
+    last_month_expenses = float(last_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0)
 
-    last_month_income = last_month_qs.filter(category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
-    income_change = round(((monthly_income - last_month_income) / last_month_income) * 100, 2) if last_month_income else 0
-
-    last_month_expenses = last_month_qs.filter(category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
-    expense_change = round(((monthly_expenses - last_month_expenses) / last_month_expenses) * 100, 2) if last_month_expenses else 0
+    income_change = calc_progress(monthly_income, last_month_income)
+    expense_change = calc_progress(monthly_expenses, last_month_expenses)
 
     # Explicit Savings Calculation
-    savings = float(monthly_income) - float(monthly_expenses)
-    last_month_savings = float(last_month_income) - float(last_month_expenses)
-    savings_change = round(((savings - last_month_savings) / abs(last_month_savings)) * 100, 2) if last_month_savings else 0
-    savings_rate = round((savings / float(monthly_income)) * 100, 2) if monthly_income > 0 else 0
+    savings = monthly_income - monthly_expenses
+    last_month_savings = last_month_income - last_month_expenses
+    savings_change = calc_progress(savings, last_month_savings)
+    savings_rate = round((savings / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
 
-    # Debt Ratio
+    # Debt Ratio (Debt-to-Income / DTI)
     from users.models import FinancialData
+    from payments.models import RecurringPayment
+    from django.db.models import Q
+    
     financial_data = FinancialData.objects.filter(user=user).first()
-    total_debt = float(financial_data.total_debt) if financial_data else 0
-    debt_ratio = round((total_debt / float(monthly_income)) * 100, 2) if monthly_income > 0 else 0
+    
+    # 1. Base monthly loan/debt payments from user's financial profile
+    monthly_loans = float(financial_data.loans) if financial_data else 0
+    
+    # 2. Add any active recurring debt payments (loans, EMIs, credit cards)
+    recurring_debts = RecurringPayment.objects.filter(
+        user=user, status='active'
+    ).filter(
+        Q(name__icontains='loan') | 
+        Q(name__icontains='emi') | 
+        Q(name__icontains='mortgage') | 
+        Q(name__icontains='credit')
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    # 3. Add actual transaction debt payments from the current month
+    actual_debt_payments = last_month_qs.filter(
+        Q(category__name__icontains='loan') | 
+        Q(category__name__icontains='emi') | 
+        Q(category__name__icontains='mortgage') |
+        Q(category__name__icontains='credit') |
+        Q(description__icontains='loan') |
+        Q(description__icontains='emi')
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    total_monthly_debt = monthly_loans + float(recurring_debts) + float(actual_debt_payments)
+    
+    # Calculate DTI Ratio percentage
+    debt_ratio = round((total_monthly_debt / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
 
     # Financial Health Score
-    if savings_rate > 20 and debt_ratio < 30:
-        financial_health_score = 100
-        financial_health = 'Excellent'
-    elif savings_rate > 10 and debt_ratio < 40:
-        financial_health_score = 70
-        financial_health = 'Good'
+    if total_transactions_count == 0:
+        financial_health_score = 0
+        financial_health = ''
     else:
-        financial_health_score = 30
-        financial_health = 'Poor'
+        if savings_rate > 20 and debt_ratio < 30:
+            financial_health_score = 100
+            financial_health = 'Excellent'
+        elif savings_rate > 10 and debt_ratio < 40:
+            financial_health_score = 70
+            financial_health = 'Good'
+        else:
+            financial_health_score = 30
+            financial_health = 'Poor'
 
     total_goal = SavingsGoal.objects.filter(user=user).aggregate(Sum('target_amount'))['target_amount__sum'] or 1
     total_savings = SavingsGoal.objects.filter(user=user).aggregate(Sum('saved_amount'))['saved_amount__sum'] or 0

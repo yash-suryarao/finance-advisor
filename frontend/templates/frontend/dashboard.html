@@ -15,59 +15,11 @@
 <body class="bg-gray-50">
     {% include 'frontend/sidebar.html' %}
     <div class="flex-1 ml-20 flex flex-col">
-        <!-- Header -->
-        <header class="bg-white border-b border-gray-200">
-            <div class="flex items-center justify-between px-8 py-4">
-                <!-- Welcome Message -->
-                <div>
-                    <h2 id="welcomeMessage" class="text-2xl font-semibold text-gray-900">Welcome back, User</h2>
-                    <p id="currentDate" class="text-sm text-gray-500"></p>
-                </div>
-
-                <!-- Right Section: Notifications & User Avatar -->
-                <div class="flex items-center space-x-4">
-                    <!-- Notification Icon -->
-                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-gray-900">
-                        <div class="w-6 h-6 flex items-center justify-center">
-                            <i class="ri-notification-line"></i>
-                        </div>
-                        <span id="notificationBadge"
-                            class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
-                    </button>
-
-                    <!-- Notification Dropdown -->
-                    <div id="notificationDropdown"
-                        class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
-                        <div id="notificationList" class="p-4"></div>
-                    </div>
-
-                    <!-- User Profile Dropdown -->
-                    <div class="relative">
-                        <button id="userDropdownBtn"
-                            class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <img id="userAvatar" src="https://via.placeholder.com/40" class="w-8 h-8 rounded-full"
-                                alt="User">
-                        </button>
-
-                        <!-- Dropdown Menu -->
-                        <div id="userDropdown"
-                            class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg">
-                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="ri-user-line mr-2"></i> Profile
-                            </a>
-                            <a href="{% url 'logout' %}"
-                                class="logout-btn block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="ri-logout-box-line mr-2"></i> Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+        {% include 'frontend/nav.html' %}
 
         <!-- Main Content -->
         <div class="container mx-auto px-6 py-8">
-            <!-- 1️⃣ Top Summary Cards -->
+            <!-- 1️. Top Summary Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <!-- Total Balance -->
                 <div
@@ -90,7 +42,8 @@
                             <i class="ri-check-line text-green-500 text-xs"></i>
                         </div>
                     </div>
-                    <p id="monthlyIncome" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="monthlyIncome" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...
+                    </p>
                     <p id="incomeChange" class="text-sm font-medium">Loading...</p>
                 </div>
 
@@ -104,7 +57,8 @@
                             <i class="ri-shopping-cart-2-line text-red-400 text-xs"></i>
                         </div>
                     </div>
-                    <p id="monthlyExpenses" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="monthlyExpenses" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...
+                    </p>
                     <p id="expenseChange" class="text-sm font-medium">Loading...</p>
                 </div>
 
@@ -117,12 +71,13 @@
                             <i class="ri-safe-2-line text-purple-400 text-xs"></i>
                         </div>
                     </div>
-                    <p id="savingsAmount" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...</p>
+                    <p id="savingsAmount" class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Loading...
+                    </p>
                     <p id="savingsChange" class="text-sm font-medium">Loading...</p>
                 </div>
             </div>
 
-            <!-- 2️⃣ Income vs Expenses Section -->
+            <!-- 2️. Income vs Expenses Section -->
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
                 <!-- Bar Chart (Left - 2 columns span) -->
                 <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -192,7 +147,7 @@
                 </div>
             </div>
 
-            <!-- 3️⃣ Action Buttons Section -->
+            <!-- 3️. Action Buttons Section -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 <a href="/transactions/"
                     class="flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition group">
@@ -228,7 +183,7 @@
                 </a>
             </div>
 
-            <!-- 4️⃣ Recent Transactions & Budget Section -->
+            <!-- 4️. Recent Transactions & Budget Section -->
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
                 <!-- Recent Transactions (Left - 2 columns span) -->
                 <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
@@ -242,7 +197,8 @@
 
                     <div class="relative flex-1">
                         <!-- Timeline visual line -->
-                        <div class="absolute left-[39px] top-4 bottom-4 w-[2px] bg-gray-100 z-0 hidden sm:block"></div>
+                        <div class="absolute left-[39px] top-4 bottom-4 w-[2px] bg-gray-100 z-0 hidden sm:block">
+                        </div>
                         <div id="transactionList"
                             class="space-y-0 h-[400px] overflow-y-auto pr-2 relative z-10 custom-scrollbar">
                             <!-- Transactions populated here via JS -->
@@ -277,7 +233,7 @@
             </div>
         </div>
 
-        <!-- 5️⃣ AI Insights & Upcoming Bills Section -->
+        <!-- 5️. AI Insights & Upcoming Bills Section -->
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8 mt-2">
             <!-- AI Insights (Left - 2 columns span) -->
             <div class="xl:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
@@ -316,7 +272,7 @@
             </div>
         </div>
 
-        <!-- 6️⃣ Savings Goals Section -->
+        <!-- 6️. Savings Goals Section -->
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-semibold text-gray-900">Savings Goals</h3>

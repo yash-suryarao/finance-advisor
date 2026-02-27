@@ -50,14 +50,6 @@
             <input type="month" id="endDate" class="border rounded p-2">
             </div>
             <div class="flex flex-col">
-            <label for="userFilter" class="font-semibold">User Type:</label>
-            <select id="userFilter" class="border rounded p-2">
-                <option value="">All</option>
-                <option value="0">Free Users</option>
-                <option value="1">Premium Users</option>
-            </select>
-            </div>
-            <div class="flex flex-col">
             <label for="transactionFilter" class="font-semibold">Transaction Type:</label>
             <select id="transactionFilter" class="border rounded p-2">
                 <option value="">All</option>
@@ -80,9 +72,7 @@
             <div class="bg-white p-5 rounded-lg shadow-md">
             <canvas id="revenueChart" style="height: 300px; width: 100%;"></canvas>
             </div>
-            <div class="bg-white p-5 rounded-lg shadow-md">
-            <canvas id="userDistributionChart" style="height: 300px; width: 100%;"></canvas>
-            </div>
+
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div class="bg-white p-5 rounded-lg shadow-md">
@@ -115,10 +105,7 @@
                     revenueChart.data.datasets[0].data = data.revenue_values;
                     revenueChart.update();
         
-                    // Update User Distribution Chart
-                    userChart.data.datasets[0].data = data.user_distribution.map(item => item.count);
-                    userChart.update();
-        
+
                     // Update Transaction Chart
                     transactionChart.data.labels = data.transaction_data.map(item => item.category_type);
                     transactionChart.data.datasets[0].data = data.transaction_data.map(item => item.total);
@@ -134,7 +121,6 @@
                     const filters = {
                         start_date: document.getElementById("startDate").value,
                         end_date: document.getElementById("endDate").value,
-                        user_type: document.getElementById("userFilter").value,
                         transaction_type: document.getElementById("transactionFilter").value,
                         payment_status: document.getElementById("paymentFilter").value
                     };
@@ -148,11 +134,7 @@
                     options: { responsive: true }
                 });
         
-                userChart = new Chart(document.getElementById('userDistributionChart'), {
-                    type: 'pie',
-                    data: { labels: ['Free', 'Premium'], datasets: [{ data: [], backgroundColor: ['#ffcc00', '#ff4500'] }] }
-                });
-        
+
                 transactionChart = new Chart(document.getElementById('transactionCategoryChart'), {
                     type: 'doughnut',
                     data: { labels: [], datasets: [{ data: [], backgroundColor: ['#34D399', '#EF4444'] }] }

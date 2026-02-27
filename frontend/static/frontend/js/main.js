@@ -146,6 +146,7 @@ window.updateHealthGauge = function (score, label) {
     let healthColor = '#F59E0B'; // Yellow warning fallback
     if (label === 'Excellent') healthColor = '#10B981'; // Green
     if (label === 'Poor') healthColor = '#EF4444'; // Red
+    if (label === '') healthColor = '#9CA3AF'; // Gray for empty/no-data
 
     financialHealthGauge.setOption({
         series: [{
@@ -173,6 +174,7 @@ window.updateHealthGauge = function (score, label) {
                 offsetCenter: [0, '25%'],
                 valueAnimation: true,
                 formatter: function (value) {
+                    if (label === '') return '{str|\nNo Data}';
                     return '{value|' + value.toFixed(0) + '}{str|\n' + label + '}';
                 },
                 rich: {
@@ -190,21 +192,44 @@ async function fetchDashboardStats() {
         const response = await fetch('/frontend/financial-summary/', { headers: authHeaders });
         const data = await response.json();
 
-        document.getElementById('totalBalance').textContent = `₹${parseFloat(data.total_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        document.getElementById('balanceChange').innerHTML = `<i class="ri-arrow-${data.balance_change >= 0 ? 'up' : 'down'}-line"></i> ${data.balance_change}%`;
-        document.getElementById('balanceChange').className = `text-sm mt-2 ${data.balance_change >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        const onlyExpense = (data.monthly_income === 0 && data.monthly_expenses > 0);
 
-        document.getElementById('monthlyIncome').textContent = `₹${parseFloat(data.monthly_income).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        document.getElementById('incomeChange').innerHTML = `<i class="ri-arrow-${data.income_change >= 0 ? 'up' : 'down'}-line"></i> ${data.income_change}%`;
-        document.getElementById('incomeChange').className = `text-sm mt-2 ${data.income_change >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        const formatWidget = (elementId, value, isExpense = false, forceNegative = false) => {
+            const num = parseFloat(value) || 0;
+            const absoluteVal = Math.abs(num).toFixed(2);
 
-        document.getElementById('monthlyExpenses').textContent = `₹${parseFloat(Math.abs(data.monthly_expenses)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        document.getElementById('expenseChange').innerHTML = `<i class="ri-arrow-${data.expense_change >= 0 ? 'up' : 'down'}-line"></i> ${Math.abs(data.expense_change)}%`;
-        document.getElementById('expenseChange').className = `text-sm font-medium ${data.expense_change <= 0 ? 'text-green-500' : 'text-red-500'}`;
+            let isBad = isExpense ? (num > 0) : (num < 0 || forceNegative);
+            let arrow = isExpense ? (num > 0 ? 'up' : 'down') : (num < 0 || forceNegative ? 'down' : 'up');
 
-        document.getElementById('savingsAmount').textContent = `₹${parseFloat(data.savings).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        document.getElementById('savingsChange').innerHTML = `<i class="ri-arrow-${data.savings_change >= 0 ? 'up' : 'down'}-line"></i> ${Math.abs(data.savings_change)}%`;
-        document.getElementById('savingsChange').className = `text-sm font-medium ${data.savings_change >= 0 ? 'text-green-500' : 'text-red-500'}`;
+            // Handle true 0.00% (No change)
+            if (num === 0 && !forceNegative) {
+                arrow = isExpense ? 'down' : 'up';
+                isBad = false;
+            }
+
+            let color = isBad ? 'text-red-500' : 'text-green-500';
+            if (elementId === 'balanceChange' || elementId === 'incomeChange') {
+                color = isBad ? 'text-red-600' : 'text-green-600';
+            }
+
+            let sign = num > 0 ? '+' : (num < 0 || forceNegative ? '-' : '');
+            if (num === 0 && !forceNegative) sign = ''; // Just 0.00% without sign
+
+            document.getElementById(elementId).innerHTML = `<i class="ri-arrow-${arrow}-line"></i> ${sign}${absoluteVal}%`;
+            document.getElementById(elementId).className = `text-sm font-medium mt-2 ${color}`;
+        };
+
+        // Populate Raw Currency Amounts
+        document.getElementById('totalBalance').textContent = `₹${parseFloat(data.total_balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('monthlyIncome').textContent = `₹${parseFloat(data.monthly_income).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('monthlyExpenses').textContent = `₹${parseFloat(Math.abs(data.monthly_expenses)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('savingsAmount').textContent = `₹${parseFloat(data.savings).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Populate Calculated Percentage Changes with Arrow/Color Logic
+        formatWidget('balanceChange', data.balance_change, false, onlyExpense);
+        formatWidget('incomeChange', data.income_change, false, false);
+        formatWidget('expenseChange', data.expense_change, true, false);
+        formatWidget('savingsChange', data.savings_change, false, onlyExpense);
 
         // Financial Health Progress Bars
         document.getElementById('savingsRateLabel').textContent = `${data.savings_rate}%`;

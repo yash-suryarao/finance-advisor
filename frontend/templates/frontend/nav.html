@@ -1,29 +1,53 @@
-{% load static %}
-<header class="fixed w-full bg-white shadow-md z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 items-center">
-            <!-- Website Name -->
-            <a href="{% url 'home' %}" class="text-2xl font-bold text-primary">WealthWizard</a>
+<!-- Header Template extracted from dashboard.html -->
+<header class="bg-white border-b border-gray-200 relative z-50">
+    <div class="flex items-center justify-between px-8 py-4">
+        <!-- Welcome Message -->
+        <div>
+            <h2 id="welcomeMessage" class="text-2xl font-semibold text-gray-900">Welcome back, <span id="userName">
+                    {% if request.user.first_name or request.user.last_name %}
+                    {{ request.user.first_name }} {{ request.user.last_name }}
+                    {% else %}
+                    {{ request.user.username }}
+                    {% endif %}
+                </span></h2>
+            <p id="currentDate" class="text-sm text-gray-500"></p>
+        </div>
 
-            <!-- Navigation Links -->
-            <nav class="hidden md:flex space-x-6">
-                <a href="{% url 'home' %}" class="text-gray-600 hover:text-primary">Home</a>
-                <a href="{% url 'features' %}" class="text-gray-600 hover:text-primary">Features</a>
-                <a href="{% url 'pricing' %}" class="text-gray-600 hover:text-primary">Pricing</a>
-                <a href="{% url 'contact' %}" class="text-gray-600 hover:text-primary">Contact</a>
-            </nav>
+        <!-- Right Section: Notifications & User Avatar -->
+        <div class="flex items-center space-x-4">
+            <!-- Notification Icon -->
+            <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-gray-900">
+                <div class="w-6 h-6 flex items-center justify-center">
+                    <i class="ri-notification-line"></i>
+                </div>
+                <span id="notificationBadge"
+                    class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+            </button>
 
-            <!-- Auth Buttons -->
-            <div class="flex space-x-4">
-                {% if request.user.is_authenticated %}
-                <a href="{% url 'dashboard' %}" class="px-4 py-2 bg-secondary text-white rounded">Dashboard</a>
-                <a href="{% url 'logout' %}" class="logout-btn px-4 py-2 border border-gray-300 rounded">Logout</a>
-                {% else %}
-                <a href="{% url 'login' %}" class="px-4 py-2 border border-gray-300 rounded">Login</a>
-                <a href="{% url 'signup' %}" class="px-4 py-2 bg-primary text-white rounded">Sign Up</a>
-                {% endif %}
+            <!-- Notification Dropdown -->
+            <div id="notificationDropdown"
+                class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                <div id="notificationList" class="p-4"></div>
+            </div>
+
+            <!-- User Profile Dropdown -->
+            <div class="relative">
+                <button id="userDropdownBtn" class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <img id="userAvatar" src="https://via.placeholder.com/40" class="w-8 h-8 rounded-full" alt="User">
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="userDropdown"
+                    class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 origin-top-right">
+                    <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <i class="ri-user-line mr-2"></i> Profile
+                    </a>
+                    <a href="{% url 'logout' %}"
+                        class="logout-btn block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        <i class="ri-logout-box-line mr-2"></i> Logout
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-    <script src="{% static 'frontend/js/logout.js' %}"></script>
 </header>
