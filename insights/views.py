@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from insights.utils import get_spending_insights, predict_future_spending, suggest_savings
-from django.http import JsonResponse
+from insights.utils import get_advanced_ai_insights
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db.models import Sum, Avg
@@ -14,33 +13,10 @@ from rest_framework.response import Response
 
 from django.utils.timezone import now
 from datetime import datetime, timedelta
-from django.db.models import Sum
 from rest_framework import status
 
 from notifications.models import Notification
-from django.utils.timezone import now
 from .serializers import BudgetInsightSerializer
-
-@login_required
-def spending_insights_view(request):
-    """API to get spending insights."""
-    insights = get_spending_insights(request.user)
-    return JsonResponse({"spending_insights": insights}, safe=False)
-
-@login_required
-def forecast_spending_view(request, category):
-    """API to predict future spending for a given category."""
-    forecast = predict_future_spending(request.user, category)
-    return JsonResponse({"forecasted_spending": forecast})
-
-@login_required
-def savings_suggestions_view(request):
-    """API to provide cost-saving recommendations."""
-    suggestions = suggest_savings(request.user)
-    return JsonResponse({"savings_recommendations": suggestions})
-
-
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -48,72 +24,17 @@ def ai_insights(request):
     """
     Generates AI insights based on predictive forecasting and transaction limits.
     """
-    user = request.user
-    last_30_days = now() - timedelta(days=30)
-    insights = []
+    # Trigger the new ML Pipeline
+    insights = get_advanced_ai_insights(request.user)
 
-    # Get actual spends per category over the last 30 days
-    spending_data = (
-        Transaction.objects.filter(user=user, date__gte=last_30_days)
-        .values('category__name')
-        .annotate(total_spent=Sum('amount'))
-    )
-    
-    budgets = TransactionsBudget.objects.filter(user=user)
-    budget_dict = {b.category: float(b.monthly_limit) for b in budgets}
-
-    for spend in spending_data:
-        category = spend['category__name'] or "Uncategorized"
-        total_spent = float(spend['total_spent'] or 0)
-        
-        limit = budget_dict.get(category, 0.0)
-        if limit == 0.0:
-            continue
-            
-        # Predict future spend for the next 30 days
-        projected = predict_future_spending(user, category)
-        try:
-            projected_val = float(projected)
-            # Add current spending and forecasted difference for a complete 30-day window expectation
-            expected_total = total_spent + (projected_val / 2) # simplified logic
-        except ValueError:
-            expected_total = total_spent
-             
-        suggested = limit * 0.9 if total_spent > limit else limit
-        
-        if total_spent > limit:
-            insights.append({
-                "title": f"Overspending in {category}",
-                "message": f"You spent ₹{total_spent:.2f}, exceeding your ₹{limit:.2f} budget.",
-                "suggested_budget": round(suggested, 2),
-                "category": category,
-                "action_url": "#"
-            })
-        elif expected_total > limit:
-            insights.append({
-                "title": f"Predicted Overspending in {category}",
-                "message": f"You are at ₹{total_spent:.2f}. At your AI forecasted pace, you may hit ₹{expected_total:.2f} (Budget: ₹{limit:.2f}).",
-                "suggested_budget": round(limit, 2),
-                "category": category,
-                "action_url": "/budget/"
-            })
-        else:
-            insights.append({
-                "title": f"Good Budget Control in {category}",
-                "message": f"You are well within your ₹{limit:.2f} budget. Projected total spend: ₹{expected_total:.2f}.",
-                "suggested_budget": round(suggested, 2),
-                "category": category,
-                "action_url": "#"
-            })
-
-    # Generic insights fallback
     if not insights:
         insights.append({
+            "type": "General",
             "title": "Insufficient Data",
-            "message": "Start adding transactions and a budget to receive personalized AI financial forecasts.",
-            "suggested_budget": 0,
+            "description": "Start adding transactions and a budget to receive personalized AI financial forecasts.",
             "category": "All",
-            "action_url": "/dashboard/"
+            "data_point": 0.0,
+            "llm_details": "Keep using the app and wait for more data to be collected."
         })
 
     return Response(insights)

@@ -66,10 +66,15 @@ function renderTransactions(transactions) {
     const tbody = document.getElementById("transactionsList");
     tbody.innerHTML = transactions.map(t => `
         <tr class="border-b">
-            <td class="px-6 py-4 text-center">${t.date}</td>
-            <td class="px-6 py-4 text-center">${t.category_name || 'Uncategorized'}</td>
-            <td class="px-6 py-4 text-center font-bold">₹${parseFloat(t.amount).toFixed(2)}</td>
-            <td class="px-6 py-4 text-center text-gray-500">${t.description || "N/A"}</td>
+            <td class="px-6 py-4 text-left">${t.date}</td>
+            <td class="px-6 py-4 text-left">${t.category_name || 'Uncategorized'}</td>
+            <td class="px-6 py-4 text-center">
+                <span class="px-3 py-1 text-xs font-semibold rounded-full ${t.category_type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'} capitalize">
+                    ${t.category_type || 'expense'}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-right font-bold">₹${parseFloat(t.amount).toFixed(2)}</td>
+            <td class="px-6 py-4 text-left text-gray-500">${t.description || "N/A"}</td>
             <td class="px-6 py-4 text-center">
                 <button onclick="deleteTransaction(${t.id})" class="text-red-500 hover:text-red-700 transition" title="Delete">
                     <i class="ri-close-circle-fill text-2xl"></i>

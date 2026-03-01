@@ -482,12 +482,14 @@ async function fetchAIInsights() {
 
         document.getElementById('aiInsightsBox').innerHTML = '';
 
-        if (data.length === 0) {
-            document.getElementById('aiInsightsBox').innerHTML = '<div class="col-span-2 flex items-center justify-center p-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">No new AI insights specifically for this month.</div>';
+        if (data.length === 0 || (data.length === 1 && data[0].type === "General")) {
+            const msg = data.length === 1 ? data[0].description : "No new AI insights available.";
+            document.getElementById('aiInsightsBox').innerHTML = `<div class="col-span-full flex items-center justify-center p-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">${msg}</div>`;
+            return;
         }
 
         data.forEach(insight => {
-            let isWarning = insight.title.toLowerCase().includes('overspending');
+            let isWarning = insight.type === 'Anomaly' || insight.type === 'Budget';
             let borderColor = isWarning ? 'border-red-500' : 'border-blue-500';
             let bgColor = isWarning ? 'bg-red-50' : 'bg-blue-50';
             let iconColor = isWarning ? 'text-red-500' : 'text-blue-500';
@@ -495,7 +497,11 @@ async function fetchAIInsights() {
             let textColor = isWarning ? 'text-red-600' : 'text-blue-600';
             let subtleTextColor = isWarning ? 'text-red-400' : 'text-blue-400';
             let btnColor = isWarning ? 'text-red-700 hover:text-red-800' : 'text-blue-700 hover:text-blue-800';
-            let icon = isWarning ? 'ri-error-warning-line' : 'ri-information-line';
+
+            let icon = 'ri-information-line';
+            if (insight.type === 'Anomaly') icon = 'ri-error-warning-line';
+            else if (insight.type === 'Forecast') icon = 'ri-line-chart-line';
+            else if (insight.type === 'Budget') icon = 'ri-scissors-cut-line';
 
             document.getElementById('aiInsightsBox').innerHTML += `
                 <div class="${bgColor} rounded-xl border-l-4 ${borderColor} p-5 hover:shadow-sm transition">
@@ -503,61 +509,56 @@ async function fetchAIInsights() {
                         <i class="${icon} ${iconColor} text-lg mr-2 mt-0.5"></i>
                         <h4 class="text-sm font-bold ${titleColor} leading-tight">${insight.title}</h4>
                     </div>
-                    <p class="text-sm ${textColor} mb-4 ml-6 leading-relaxed">${insight.message}</p>
+                    <p class="text-sm ${textColor} mb-4 ml-6 leading-relaxed">${insight.description}</p>
                     <div class="ml-6 flex items-center justify-between">
                         <span class="text-xs font-semibold ${subtleTextColor}">Category: <span class="uppercase tracking-wide">${insight.category}</span></span>
-                        ${insight.suggested_budget ? `
-                            <button class="acceptBudgetBtn text-xs font-bold ${btnColor} flex items-center" 
-                                data-category="${insight.category}" data-budget="${insight.suggested_budget}">
-                                Apply Budget (₹${insight.suggested_budget}) <i class="ri-arrow-right-line ml-1"></i>
-                            </button>
-                        ` : `
-                            <a href="${insight.action_url}" class="text-xs font-bold ${btnColor} flex items-center">View details <i class="ri-arrow-right-line ml-1"></i></a>
-                        `}
+                        <button onclick="showAIModal('${encodeURIComponent(insight.title)}', '${encodeURIComponent(insight.llm_details)}')" class="text-xs font-bold ${btnColor} flex items-center">View Details <i class="ri-arrow-right-line ml-1"></i></button>
                     </div>
                 </div>
             `;
         });
-
-        // Attach event listeners to "Accept Suggested Budget" buttons
-        document.querySelectorAll('.acceptBudgetBtn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                acceptSuggestedBudget(this.getAttribute('data-category'), this.getAttribute('data-budget'));
-            });
-        });
-
     } catch (error) {
         console.error('Error fetching AI insights:', error);
     }
 }
 
-fetchAIInsights();
+function showAIModal(title, details) {
+    const rawTitle = decodeURIComponent(title);
+    const rawDetails = decodeURIComponent(details);
 
-async function acceptSuggestedBudget(category, newLimit) {
-    try {
-        const response = await fetch('/api/insights/accept-suggested-budget/', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie('csrftoken')
-            },
-            body: JSON.stringify({ category, new_limit: newLimit })
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.message) {
-            alert(result.message);
-            fetchAIInsights(); // Refresh insights after updating budget
-            if (typeof fetchBudgetData === 'function') fetchBudgetData(); // Refresh budget if on that page
-        } else {
-            alert(result.error || "Error updating budget.");
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Failed to communicate with the server.");
+    let modal = document.getElementById('aiInsightModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'aiInsightModal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 p-6 relative">
+                <button onclick="document.getElementById('aiInsightModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
+                    <i class="ri-close-line text-2xl"></i>
+                </button>
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="ri-sparkling-fill text-indigo-600 text-xl"></i>
+                    </div>
+                    <h3 id="aiModalTitle" class="text-xl font-bold text-gray-900 leading-tight">AI Insight</h3>
+                </div>
+                <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl relative">
+                    <p id="aiModalDetails" class="text-indigo-900 text-sm leading-relaxed"></p>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="document.getElementById('aiInsightModal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition duration-200">Got it</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
+
+    document.getElementById('aiModalTitle').innerText = rawTitle;
+    document.getElementById('aiModalDetails').innerText = rawDetails;
+    modal.classList.remove('hidden');
 }
+
+fetchAIInsights();
 
 // Helper for CSRF token
 function getCookie(name) {
@@ -577,48 +578,7 @@ function getCookie(name) {
 
 
 
-async function fetchUpcomingBills() {
-    try {
-        const response = await fetch('/api/transactions/upcoming-bills/', { headers: authHeaders });
-        const bills = await response.json();
-        const billsList = document.getElementById('billsList');
 
-        billsList.innerHTML = '';
-
-        if (bills.length === 0) {
-            billsList.innerHTML = '<div class="flex items-center justify-center h-full text-sm font-medium text-gray-500">No upcoming bills for now.</div>';
-            return;
-        }
-
-        bills.forEach(bill => {
-            let textColor = bill.days_remaining <= 7 ? "text-red-600" : "text-gray-900";
-            let formattedAmount = `₹${bill.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-
-            billsList.innerHTML += `
-                <div class="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:shadow-sm transition">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                            <i class="ri-calendar-line text-lg"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-gray-900 text-sm">${bill.name}</h4>
-                            <p class="text-xs text-gray-500 font-medium">${bill.category}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold text-gray-900 text-sm">${formattedAmount}</p>
-                        <p class="text-xs font-medium ${textColor}">Due in ${bill.days_remaining}d</p>
-                    </div>
-                </div>
-            `;
-        });
-
-    } catch (error) {
-        console.error('Error fetching upcoming bills:', error);
-    }
-}
-
-fetchUpcomingBills();
 
 
 async function fetchUserNotifications() {
@@ -736,107 +696,3 @@ if (document.getElementById('saveBudgetBtn')) {
     });
 }
 
-// Fetch Savings Goals for Dashboard
-async function fetchSavingsGoals() {
-    try {
-        const response = await fetch('/api/insights/goal-progress/', { headers: authHeaders });
-        if (!response.ok) return;
-        const data = await response.json();
-        const goalsList = document.getElementById('savingsGoalsList');
-        if (!goalsList) return;
-
-        goalsList.innerHTML = '';
-
-        if (!data.goals || data.goals.length === 0) {
-            goalsList.innerHTML = '<div class="col-span-full flex items-center justify-center p-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">No savings goals set. Create one to start tracking!</div>';
-            return;
-        }
-
-        data.goals.forEach(goal => {
-            const target = parseFloat(goal.target_amount);
-            const saved = parseFloat(goal.saved_amount || 0);
-            const percentage = Math.min((saved / target) * 100, 100);
-
-            const today = new Date();
-            const deadline = new Date(goal.deadline);
-            const timeDiff = deadline.getTime() - today.getTime();
-            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-            let statusBadge = '';
-            let isOverdue = false;
-            if (daysLeft < 0 && percentage < 100) {
-                isOverdue = true;
-                statusBadge = `<span class="text-xs font-bold text-red-600">Overdue</span>`;
-            } else if (percentage >= 100) {
-                statusBadge = `<span class="text-xs font-bold text-green-600">Completed</span>`;
-            } else {
-                statusBadge = `<span class="text-xs font-bold text-blue-600">${daysLeft} days left</span>`;
-            }
-
-            goalsList.innerHTML += `
-                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
-                                <i class="ri-flag-fill text-xl"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900">${goal.goal_name}</h4>
-                                <p class="text-xs font-medium text-gray-500 mt-0.5">Target: ₹${target.toLocaleString('en-IN')} by ${deadline.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                           ${statusBadge}
-                        </div>
-                    </div>
-                    
-                    <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden mb-3">
-                        <div class="${percentage >= 100 ? 'bg-green-500' : (isOverdue ? 'bg-red-500' : 'bg-blue-500')} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center text-xs font-bold">
-                        <span class="text-gray-500">Saved: <span class="text-gray-900">₹${saved.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
-                        <span class="text-gray-500">Left: <span class="text-gray-900">₹${Math.max(target - saved, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
-                    </div>
-                </div>
-            `;
-        });
-    } catch (error) {
-        console.error('Error fetching savings goals:', error);
-    }
-}
-if (document.getElementById('savingsGoalsList')) fetchSavingsGoals();
-
-// Save Goal logic for modal
-if (document.getElementById('saveGoalBtn')) {
-    document.getElementById('saveGoalBtn').addEventListener('click', async () => {
-        const goal_name = document.getElementById('goalTitle').value;
-        const target_amount = parseFloat(document.getElementById('goalAmount').value);
-        const deadline = document.getElementById('goalDeadline').value;
-
-        if (!goal_name || !target_amount || !deadline) {
-            alert("Please fill in all goal fields.");
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/insights/add-goal/', {
-                method: 'POST',
-                headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken'), ...authHeaders },
-                body: JSON.stringify({ goal_name, target_amount, deadline })
-            });
-            if (res.ok) {
-                document.getElementById('addGoalModal').classList.add('hidden');
-                document.getElementById('goalTitle').value = '';
-                document.getElementById('goalAmount').value = '';
-                document.getElementById('goalDeadline').value = '';
-                fetchSavingsGoals();
-            } else {
-                alert("Error saving goal.");
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Failed to communicate with the server.");
-        }
-    });
-}
