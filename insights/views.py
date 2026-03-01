@@ -4,7 +4,7 @@ from insights.utils import get_advanced_ai_insights
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db.models import Sum, Avg
-from .models import BudgetInsight
+from .models import BudgetInsight, SavingsGoal
 from transactions.models import Budget as TransactionsBudget, BudgetHistory, Transaction
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
@@ -68,7 +68,7 @@ class BudgetInsightView(generics.ListAPIView):
 
 
 
-# 🚀 1️⃣ AI-Powered Smart Recommendations
+# 1. AI-Powered Smart Recommendations
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_savings_insights(request):
@@ -88,7 +88,7 @@ def get_savings_insights(request):
 
     return Response(insights_list, status=status.HTTP_200_OK)
 
-# 🚀 2️⃣ Monthly Savings Projection Chart
+# 2. Monthly Savings Projection Chart
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_savings_projections(request):
@@ -199,6 +199,25 @@ def get_notifications(request):
 
     return Response(notifications_list)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_savings_goal(request):
+    """API to create a new savings goal."""
+    data = request.data
+    goal = SavingsGoal.objects.create(
+        user=request.user,
+        goal_name=data.get("goal_name"),
+        target_amount=data.get("target_amount"),
+        deadline=datetime.strptime(data.get("deadline"), "%Y-%m-%d").date()
+    )
+    return Response({"message": "Goal created successfully!", "goal_id": goal.id})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_savings_progress(request):
+    """API to fetch user's savings goals and progress."""
+    goals = SavingsGoal.objects.filter(user=request.user).values()
+    return Response({"goals": list(goals)})
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_notifications_read(request):

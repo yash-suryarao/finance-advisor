@@ -696,3 +696,107 @@ if (document.getElementById('saveBudgetBtn')) {
     });
 }
 
+// Fetch Savings Goals for Dashboard
+async function fetchSavingsGoals() {
+    try {
+        const response = await fetch('/api/insights/goal-progress/', { headers: authHeaders });
+        if (!response.ok) return;
+        const data = await response.json();
+        const goalsList = document.getElementById('savingsGoalsList');
+        if (!goalsList) return;
+
+        goalsList.innerHTML = '';
+
+        if (!data.goals || data.goals.length === 0) {
+            goalsList.innerHTML = '<div class="col-span-full flex items-center justify-center p-8 text-sm text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">No savings goals set. Create one to start tracking!</div>';
+            return;
+        }
+
+        data.goals.forEach(goal => {
+            const target = parseFloat(goal.target_amount);
+            const saved = parseFloat(goal.saved_amount || 0);
+            const percentage = Math.min((saved / target) * 100, 100);
+
+            const today = new Date();
+            const deadline = new Date(goal.deadline);
+            const timeDiff = deadline.getTime() - today.getTime();
+            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            let statusBadge = '';
+            let isOverdue = false;
+            if (daysLeft < 0 && percentage < 100) {
+                isOverdue = true;
+                statusBadge = `<span class="text-xs font-bold text-red-600">Overdue</span>`;
+            } else if (percentage >= 100) {
+                statusBadge = `<span class="text-xs font-bold text-green-600">Completed</span>`;
+            } else {
+                statusBadge = `<span class="text-xs font-bold text-blue-600">${daysLeft} days left</span>`;
+            }
+
+            goalsList.innerHTML += `
+                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
+                                <i class="ri-flag-fill text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900">${goal.goal_name}</h4>
+                                <p class="text-xs font-medium text-gray-500 mt-0.5">Target: ₹${target.toLocaleString('en-IN')} by ${deadline.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                           ${statusBadge}
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden mb-3">
+                        <div class="${percentage >= 100 ? 'bg-green-500' : (isOverdue ? 'bg-red-500' : 'bg-blue-500')} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-xs font-bold">
+                        <span class="text-gray-500">Saved: <span class="text-gray-900">₹${saved.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
+                        <span class="text-gray-500">Left: <span class="text-gray-900">₹${Math.max(target - saved, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
+                    </div>
+                </div>
+            `;
+        });
+    } catch (error) {
+        console.error('Error fetching savings goals:', error);
+    }
+}
+if (document.getElementById('savingsGoalsList')) fetchSavingsGoals();
+
+// Save Goal logic for modal
+if (document.getElementById('saveGoalBtn')) {
+    document.getElementById('saveGoalBtn').addEventListener('click', async () => {
+        const goal_name = document.getElementById('goalTitle').value;
+        const target_amount = parseFloat(document.getElementById('goalAmount').value);
+        const deadline = document.getElementById('goalDeadline').value;
+
+        if (!goal_name || !target_amount || !deadline) {
+            alert("Please fill in all goal fields.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/insights/add-goal/', {
+                method: 'POST',
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken'), ...authHeaders },
+                body: JSON.stringify({ goal_name, target_amount, deadline })
+            });
+            if (res.ok) {
+                document.getElementById('addGoalModal').classList.add('hidden');
+                document.getElementById('goalTitle').value = '';
+                document.getElementById('goalAmount').value = '';
+                document.getElementById('goalDeadline').value = '';
+                fetchSavingsGoals();
+            } else {
+                alert("Error saving goal.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to communicate with the server.");
+        }
+    });
+}

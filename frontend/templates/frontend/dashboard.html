@@ -220,6 +220,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Savings Goals Section -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 mt-2 ">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Savings Goals</h3>
+                <button onclick="document.getElementById('addGoalModal').classList.remove('hidden')"
+                    class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
+                    <i class="ri-add-line mr-1 text-lg"></i> Add Goal
+                </button>
+            </div>
+            <div id="savingsGoalsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Savings goals populated here via JS -->
+                <div class="col-span-full flex items-center justify-center text-sm font-medium text-gray-500 py-10">
+                    Loading goals...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Add Budget Modal -->
