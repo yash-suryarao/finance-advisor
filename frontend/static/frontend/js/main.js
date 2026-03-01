@@ -3,6 +3,19 @@ const transactionModal = document.getElementById('transactionModal');
 const authHeaders = {
     "Authorization": `Bearer ${localStorage.getItem('access_token')}`
 };
+
+// Global Fetch Interceptor to catch 401 Unauthorized (Expired Tokens)
+const originalFetch = window.fetch;
+window.fetch = async function () {
+    let response = await originalFetch.apply(this, arguments);
+    if (response.status === 401 && typeof arguments[0] === 'string' && !arguments[0].includes('/login/')) {
+        console.warn("Session expired. Redirecting to login.");
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/frontend/login/';
+    }
+    return response;
+};
 const editAmount = document.getElementById('editAmount');
 const editCategory = document.getElementById('editCategory');
 const editType = document.getElementById('editType');

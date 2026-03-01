@@ -22,8 +22,7 @@ from django.conf.urls.static import static
 
 from frontend.views import (
     dashboard_stats, login_view, signup_view, dashboard_page,
-    transactions_page, budget_page, saving_goals_page,
-    recurring_payments_page, group_expenses_page, analysis_page, profile_page
+    transactions_page, analysis_page, profile_page
 )
 
 urlpatterns = [
@@ -34,7 +33,6 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
 
     # Core App Routes
-    path('api/group-expenses/', include('group_expenses.urls')),
     path('api/transactions/', include('transactions.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/insights/', include('insights.urls')),
@@ -45,10 +43,7 @@ urlpatterns = [
     path('frontend/', include('frontend.urls')),
     path('dashboard/', dashboard_page, name='dashboard_page'),
     path('transactions/', transactions_page, name='transactions_page'),
-    path('budget/', budget_page, name='budget_page'),
-    path('saving-goals/', saving_goals_page, name='saving_goals_page'),
-    path('recurring-payments/', recurring_payments_page, name='recurring_payments_page'),
-    path('group-expenses/', group_expenses_page, name='group_expenses_page'),
+
     path('analysis/', analysis_page, name='analysis_page'),
     path('profile/', profile_page, name='profile_page'),
     path('dashboard-stats/', dashboard_stats, name='dashboard_stats'),

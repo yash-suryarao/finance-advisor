@@ -4,8 +4,6 @@ from insights.utils import get_spending_insights, predict_future_spending, sugge
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from .models import SavingsGoal
-from insights.utils import track_savings_progress
 from django.db.models import Sum, Avg
 from .models import BudgetInsight
 from transactions.models import Budget as TransactionsBudget, BudgetHistory, Transaction
@@ -41,56 +39,6 @@ def savings_suggestions_view(request):
     suggestions = suggest_savings(request.user)
     return JsonResponse({"savings_recommendations": suggestions})
 
-
-
-@csrf_exempt
-@login_required
-def add_savings_goal(request):
-    """API to create a new savings goal."""
-    if request.method == "POST":
-        data = json.loads(request.body)
-        goal = SavingsGoal.objects.create(
-            user=request.user,
-            goal_name=data["goal_name"],
-            target_amount=data["target_amount"],
-            deadline=datetime.strptime(data["deadline"], "%Y-%m-%d").date()
-        )
-        return JsonResponse({"message": "Goal created successfully!", "goal_id": goal.id})
-
-@login_required
-def get_savings_progress(request):
-    """API to fetch user's savings goals and progress."""
-    track_savings_progress(request.user)  # Auto-update progress
-    goals = SavingsGoal.objects.filter(user=request.user).values()
-    return JsonResponse({"goals": list(goals)}, safe=False)
-
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def update_goal_savings(request):
-    """API to manually update savings for a goal."""
-    user = request.user
-    goal_id = request.data.get("goal_id")
-    saved_amount = request.data.get("saved_amount")
-
-    try:
-        goal = SavingsGoal.objects.get(id=goal_id, user=user)
-        goal.saved_amount = saved_amount
-        goal.save()
-
-        # Check if goal is completed
-        if goal.saved_amount >= goal.target_amount:
-            Notifications.objects.create(
-                user=user,
-                message=f"🎉 Congratulations! You have completed your savings goal: {goal.goal_name}",
-                created_at=now(),
-                is_read=False
-            )
-
-        return Response({"message": "Goal updated successfully."})
-    except SavingsGoal.DoesNotExist:
-        return Response({"error": "Goal not found."}, status=404)
 
 
 

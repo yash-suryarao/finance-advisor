@@ -17,7 +17,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.models import Profile
 from .serializers import BudgetSerializer, BudgetHistorySerializer, CategorySerializer
-from payments.models import RecurringPayment
 import pytesseract
 from PIL import Image
 import re

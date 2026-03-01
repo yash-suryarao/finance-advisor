@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'users',
     'transactions',
     'payments',
-    'group_expenses',
     'notifications',
     'insights',
     'admin_dashboard',

@@ -5,8 +5,7 @@ from django.db.models import Sum, Count, Avg, F
 from datetime import datetime, timedelta
 from users.models import User
 from transactions.models import Transaction, Category
-from group_expenses.models import Settlement
-from insights.models import BudgetInsight, SavingsGoal
+from insights.models import BudgetInsight
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.shortcuts import redirect
@@ -23,15 +22,14 @@ def dashboard_stats(request):
     forecasted_spending = BudgetInsight.objects.aggregate(Sum('forecasted_spending'))['forecasted_spending__sum'] or 1
     accuracy_rate = round((forecasted_spending / total_spending) * 100, 2) if total_spending else 0
 
-    total_settlements = Settlement.objects.filter(is_settled=True).count()
-    total_transactions = Settlement.objects.count()
-    support_availability = round((total_settlements / total_transactions) * 100, 2) if total_transactions else 0
+    total_settlements = 0
+    total_transactions = 0
+    support_availability = 0
 
     current_month = datetime.now().month
-    monthly_savings = SavingsGoal.objects.filter(created_at__month=current_month).aggregate(Sum('saved_amount'))['saved_amount__sum'] or 0
-
-    last_month_savings = SavingsGoal.objects.filter(created_at__month=current_month-1).aggregate(Sum('saved_amount'))['saved_amount__sum'] or 1
-    savings_growth = round(((monthly_savings - last_month_savings) / last_month_savings) * 100, 2) if last_month_savings else 0
+    monthly_savings = 0
+    last_month_savings = 1
+    savings_growth = 0
 
     investment_users = BudgetInsight.objects.values('user_id').distinct().count()
     investment_users_list = BudgetInsight.objects.values('user_id').distinct()[:5]  # Fetch 5 sample users
@@ -109,7 +107,6 @@ def financial_summary(request):
 
     # Debt Ratio (Debt-to-Income / DTI)
     from users.models import FinancialData
-    from payments.models import RecurringPayment
     from django.db.models import Q
     
     financial_data = FinancialData.objects.filter(user=user).first()
@@ -117,17 +114,7 @@ def financial_summary(request):
     # 1. Base monthly loan/debt payments from user's financial profile
     monthly_loans = float(financial_data.loans) if financial_data else 0
     
-    # 2. Add any active recurring debt payments (loans, EMIs, credit cards)
-    recurring_debts = RecurringPayment.objects.filter(
-        user=user, status='active'
-    ).filter(
-        Q(name__icontains='loan') | 
-        Q(name__icontains='emi') | 
-        Q(name__icontains='mortgage') | 
-        Q(name__icontains='credit')
-    ).aggregate(Sum('amount'))['amount__sum'] or 0
-    
-    # 3. Add actual transaction debt payments from the current month
+    # 2. Add actual transaction debt payments from the current month
     actual_debt_payments = last_month_qs.filter(
         Q(category__name__icontains='loan') | 
         Q(category__name__icontains='emi') | 
@@ -137,7 +124,7 @@ def financial_summary(request):
         Q(description__icontains='emi')
     ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    total_monthly_debt = monthly_loans + float(recurring_debts) + float(actual_debt_payments)
+    total_monthly_debt = monthly_loans + float(actual_debt_payments)
     
     # Calculate DTI Ratio percentage
     debt_ratio = round((total_monthly_debt / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
@@ -157,9 +144,9 @@ def financial_summary(request):
             financial_health_score = 30
             financial_health = 'Poor'
 
-    total_goal = SavingsGoal.objects.filter(user=user).aggregate(Sum('target_amount'))['target_amount__sum'] or 1
-    total_savings = SavingsGoal.objects.filter(user=user).aggregate(Sum('saved_amount'))['saved_amount__sum'] or 0
-    savings_progress = round((total_savings / total_goal) * 100, 2) if total_goal else 0
+    total_goal = 1
+    total_savings = 0
+    savings_progress = 0
 
     context = {
         'total_balance': total_balance,
@@ -283,23 +270,7 @@ def dashboard_page(request):
 def transactions_page(request):
     return render(request, 'frontend/transaction.html')
 
-@login_required
-def budget_page(request):
-    return render(request, 'frontend/budget.html')
 
-@login_required
-def saving_goals_page(request):
-    return render(request, 'frontend/goals.html')
-
-@login_required
-def recurring_payments_page(request):
-    return render(request, 'frontend/recurring.html')
-
-@login_required
-def group_expenses_page(request):
-    return render(request, 'frontend/group_expenses.html')
-
-@login_required
 def analysis_page(request):
     return render(request, 'frontend/analysis.html')
 
