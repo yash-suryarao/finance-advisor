@@ -24,7 +24,6 @@ class Transaction(models.Model):
     category_type = models.CharField(max_length=50, choices=[('income', 'Income'), ('expense', 'Expense')], default='expense')
     description = models.TextField(blank=True, null=True)
     date = models.DateField()
-    currency = models.CharField(max_length=3, choices=[('USD', 'USD'), ('EUR', 'EUR'), ('INR', 'INR')], default='INR')
     created_at = models.DateTimeField(default=datetime.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -62,3 +61,15 @@ class BudgetHistory(models.Model):
 
     class Meta:
         unique_together = ('user', 'category', 'month', 'year')  # Prevents duplicate records
+
+class DeletedTransaction(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    category_name = models.CharField(max_length=100, null=True, blank=True)
+    category_type = models.CharField(max_length=50)
+    description = models.TextField(blank=True, null=True)
+    date = models.DateField()
+    deleted_at = models.DateTimeField(default=datetime.now)
+
+    def __str__(self):
+        return f"Deleted: {self.user.username} - {self.amount} ({self.category_name})"

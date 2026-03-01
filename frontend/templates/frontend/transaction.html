@@ -78,7 +78,6 @@
                                 onclick="sortTransactions('category')">Category</th>
                             <th class="py-4 px-6 text-right text-gray-700 font-medium cursor-pointer hover:bg-gray-50"
                                 onclick="sortTransactions('amount')">Amount</th>
-                            <th class="py-4 px-6 text-left text-gray-700 font-medium">Currency</th>
                             <th class="py-4 px-6 text-left text-gray-700 font-medium">Description</th>
                             <th class="py-4 px-6 text-center text-gray-700 font-medium">Actions</th>
                         </tr>
@@ -87,18 +86,6 @@
                         <!-- Transactions will be dynamically inserted here -->
                     </tbody>
                 </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="flex justify-between mt-6">
-                <button onclick="changePage(-1)"
-                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200">
-                    <i class="ri-arrow-left-line"></i> Previous
-                </button>
-                <button onclick="changePage(1)"
-                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-200">
-                    Next <i class="ri-arrow-right-line"></i>
-                </button>
             </div>
         </div>
 
@@ -123,13 +110,6 @@
                     <input type="number" id="transactionAmount"
                         class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Amount" required>
-                    <select id="transactionCurrency"
-                        class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required>
-                        <option value="USD">USD - US Dollar</option>
-                        <option value="EUR">EUR - Euro</option>
-                        <option value="INR">INR - Indian Rupee</option>
-                    </select>
                     <textarea id="transactionDescription"
                         class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Description"></textarea>
@@ -146,7 +126,7 @@
     </div>
     </div>
     <!-- Include Transaction JS -->
-    <script src="{% static 'frontend/js/transaction.js' %}"></script>
+    <script src="{% static 'frontend/js/transaction.js' %}?v=1.2"></script>
 </body>
 
 </html>

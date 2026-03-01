@@ -22,12 +22,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    currency = serializers.CharField(required=True)  # Ensure currency is always included
     category_name = serializers.CharField(source="category.name", read_only=True)
 
     class Meta:
         model = Transaction
-        fields = ['id', 'date', 'category', 'category_type', 'category_name', 'currency','amount', 'description', 'created_at', 'updated_at']
+        fields = ['id', 'date', 'category', 'category_type', 'category_name', 'amount', 'description', 'created_at', 'updated_at']
 
 class BudgetHistorySerializer(serializers.ModelSerializer):
     class Meta:

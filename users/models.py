@@ -55,11 +55,6 @@ class FinancialData(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatar/', blank=True, null=True)
-    preferred_currency = models.CharField(max_length=3, choices=[
-        # ('USD', 'USD'),
-        ('INR', 'INR'),
-        # ('EUR', 'EUR')
-    ], default='INR')
     date_of_birth = models.DateField(null=True, blank=True)
     occupation = models.CharField(max_length=20, choices=[
         ('Student', 'Student'),

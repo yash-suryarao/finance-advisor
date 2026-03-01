@@ -22,95 +22,10 @@ from PIL import Image
 import re
 import io
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def process_voice_entry(request):
-    """
-    Processes voice input and returns structured transaction details for user confirmation.
-    """
-    voice_text = request.data.get("voice_text", "")
-    if not voice_text:
-        return Response({"error": "No voice input received"}, status=400)
-
-    transaction_data = process_voice_transaction(voice_text)
-    return Response(transaction_data)
+from .models import DeletedTransaction
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def upload_receipt(request):
-    """
-    Extracts transaction details from an uploaded receipt image using Tesseract OCR.
-    """
-    if 'receipt' not in request.FILES:
-        return Response({"error": "No receipt image uploaded"}, status=400)
-
-    receipt_file = request.FILES['receipt']
-    
-    try:
-        image = Image.open(receipt_file)
-        extracted_text = pytesseract.image_to_string(image)
-        
-        # Simple heuristic to find amount: look for currency symbols or "Total"
-        amount = 0
-        amount_matches = re.findall(r'(\$|₹|Rs\.?|INR)?\s*(\d+(?:\.\d{2})?)', extracted_text)
-        if amount_matches:
-            # Try to find the largest amount which is typically the total
-            amounts = [float(match[1]) for match in amount_matches if match[1]]
-            if amounts:
-                amount = max(amounts)
-
-        # Default category
-        category = "Other"
-        
-        # basic keyword search in text
-        text_lower = extracted_text.lower()
-        if "food" in text_lower or "restaurant" in text_lower:
-            category = "Food"
-        elif "grocery" in text_lower or "supermarket" in text_lower or "mart" in text_lower:
-            category = "Groceries"
-        elif "fuel" in text_lower or "petrol" in text_lower or "gas" in text_lower:
-            category = "Transport"
-            
-    except Exception as e:
-        return Response({"error": f"Failed to process image: {str(e)}"}, status=500)
-
-    return Response({
-        "amount": amount,
-        "transaction_type": "expense",
-        "category": category,
-        "extracted_text_preview": extracted_text[:200]
-    })
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def confirm_voice_transaction(request):
-    """
-    Saves user-confirmed transaction to the database.
-    """
-    user = request.user
-    amount = request.data.get("amount")
-    transaction_type = request.data.get("transaction_type")
-    category_name = request.data.get("category", "Other")
-
-    if not amount or not transaction_type or not category_name:
-        return Response({"error": "Missing transaction details"}, status=400)
-
-    # Convert string to Category instance
-    category_obj, created = Category.objects.get_or_create(user=user, name=category_name)
-
-    transaction = Transaction.objects.create(
-        user=user,
-        amount=amount,
-        category_type=transaction_type,
-        category=category_obj,
-        date=now().date()
-    )
-
-    return Response({"message": "Transaction saved successfully!", "transaction_id": transaction.id})
-
-
+# View for fetching latest 10 transactions
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_transactions(request):
@@ -130,94 +45,6 @@ def get_transactions(request):
     
     return JsonResponse(data, safe=False)
 
-
-
-
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def upcoming_bills(request):
-    """
-    Fetch upcoming recurring payments for the user.
-    """
-    user = request.user
-    today = now().date()
-    upcoming_payments = RecurringPayment.objects.filter(
-        user=user, 
-        next_payment_date__gte=today,  # Payments due today or later
-        status="active"
-    ).order_by('next_payment_date')
-
-    bills_list = [
-        {
-            "id": payment.id,
-            "name": payment.name,
-            "amount": float(payment.amount),
-            "category": payment.category,
-            "frequency": payment.frequency,
-            "days_remaining": (payment.next_payment_date - today).days,
-            "next_payment_date": payment.next_payment_date.strftime("%Y-%m-%d")
-        } for payment in upcoming_payments
-    ]
-
-    return Response(bills_list)
-
-
-def track_budget_history(user):
-    """
-    Stores historical budget data and calculates suggested budget.
-    """
-    current_month = now().month
-    current_year = now().year
-
-    budgets = Budget.objects.filter(user=user)
-
-    for budget in budgets:
-        category = budget.category
-        prev_limit = budget.monthly_limit
-
-        # Get total spending for this category in the last month
-        last_month = (now() - timedelta(days=30)).month
-        total_spent = Transaction.objects.filter(
-            user=user, category_id=category, date__month=last_month
-        ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-        # AI Logic to Suggest Budget Adjustment
-        suggested_limit = prev_limit
-        if total_spent > prev_limit:
-            suggested_limit = prev_limit * 1.1  # Increase budget by 10% if overspending
-        elif total_spent < (prev_limit * 0.7):
-            suggested_limit = prev_limit * 0.9  # Decrease budget by 10% if underused
-
-        # Save to BudgetHistory Table
-        BudgetHistory.objects.update_or_create(
-            user=user,
-            category=category,
-            month=current_month,
-            year=current_year,
-            defaults={
-                "previous_limit": prev_limit,
-                "actual_spent": total_spent,
-                "suggested_limit": suggested_limit,
-            }
-        )
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def export_transactions_csv(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow(['ID', 'Date', 'Category', 'Amount', 'Description'])
-
-    transactions = Transaction.objects.all().values_list('id', 'date', 'category__name', 'amount', 'description')
-    for transaction in transactions:
-        writer.writerow(transaction)
-
-    return response
 
 
 # Pagination class for handling multiple transactions
@@ -269,7 +96,7 @@ class TransactionListCreateView(generics.ListCreateAPIView):
 
 
 
-
+# View for fetching, updating and deleting a transaction
 class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TransactionSerializer
     permission_classes = [IsAuthenticated]
@@ -277,8 +104,19 @@ class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Transaction.objects.filter(user=self.request.user)
 
+    def perform_destroy(self, instance):
+        DeletedTransaction.objects.create(
+            user=instance.user,
+            amount=instance.amount,
+            category_name=instance.category.name if instance.category else None,
+            category_type=instance.category_type,
+            description=instance.description,
+            date=instance.date
+        )
+        instance.delete()
 
 
+# View for fetching all categories
 class CategoryListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = CategorySerializer
@@ -294,25 +132,7 @@ class CategoryListView(generics.ListAPIView):
 
 
 
-class CurrencyConverter(APIView):
-    def get(self, request):
-        base_currency = request.query_params.get('base', 'USD')
-        target_currency = request.query_params.get('target', 'INR')
-
-        api_url = f"https://api.exchangerate-api.com/v4/latest/{base_currency}"
-        response = requests.get(api_url)
-
-        if response.status_code != 200:
-            return Response({"error": "Failed to fetch exchange rates"}, status=500)
-
-        data = response.json()
-        conversion_rate = data["rates"].get(target_currency, None)
-
-        if conversion_rate:
-            return Response({"rate": conversion_rate}, status=200)
-        else:
-            return Response({"error": "Invalid currency"}, status=400)
-
+# View for fetching and creating budgets
 class BudgetView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer
     permission_classes = [IsAuthenticated]
