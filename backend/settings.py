@@ -59,7 +59,7 @@ INSTALLED_APPS = [
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'financetracker@gmail.com'
+DEFAULT_FROM_EMAIL = 'yashsuryarao224@gmail.com'
 
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -138,7 +138,7 @@ DATABASES = {
 }
 
 
-
+GEMINI_API_KEY = "AIzaSyAUxS0sInmMHYUdd7KVSdy1bJbPFnNA3Ho"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
