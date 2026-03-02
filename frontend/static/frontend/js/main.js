@@ -319,11 +319,16 @@ async function fetchTransactions() {
         // Clear existing content
         transactionList.innerHTML = '';
 
+        // Sort transactions to ensure the newest are at the top (LIFO/Stack) using precise creation timestamp
+        const sortedTransactions = transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
         // Restrict to max 6 transactions for the dashboard view
-        transactions.slice(0, 6).forEach(transaction => {
+        sortedTransactions.slice(0, 6).forEach(transaction => {
             let iconClass = "ri-file-list-line text-gray-600";  // Default icon
             let bgClass = "bg-gray-100";
-            let amountClass = "text-red-600"; // Default to expense
+
+            // Set Color based purely on category_type
+            let amountClass = transaction.category_type === "income" ? "text-green-600" : "text-red-600";
 
             // Categorizing transactions
             const catName = transaction.category_name || "Other";
@@ -331,22 +336,18 @@ async function fetchTransactions() {
                 case "salary":
                     iconClass = "ri-bank-line text-green-600";
                     bgClass = "bg-green-100";
-                    amountClass = "text-green-600"; // Income
                     break;
                 case "freelance":
                     iconClass = "ri-briefcase-line text-green-600";
                     bgClass = "bg-green-100";
-                    amountClass = "text-green-600"; // Income
                     break;
                 case "investment":
                     iconClass = "ri-stock-line text-green-600";
                     bgClass = "bg-green-100";
-                    amountClass = "text-green-600"; // Income
                     break;
                 case "bonus":
                     iconClass = "ri-gift-line text-green-600";
                     bgClass = "bg-green-100";
-                    amountClass = "text-green-600"; // Income
                     break;
                 case "subscription":
                     iconClass = "ri-netflix-fill text-purple-600";
@@ -458,7 +459,9 @@ async function fetchTransactions() {
                                     <p class="text-xs font-semibold text-gray-500 mt-0.5">${transaction.category_name} &bull; ${new Date(transaction.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                                 </div>
                             </div>
-                            <p class="font-bold ${amountClass}">${transaction.category_type === "income" ? "+" : "-"}${formattedAmount}</p>
+                            <div class="text-right">
+                                <p class="font-bold ${amountClass}">${transaction.category_type === "income" ? "+" : "-"}${formattedAmount}</p>
+                            </div>
                         </div>
                     </div>
                 `;

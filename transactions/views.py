@@ -29,7 +29,7 @@ from .models import DeletedTransaction
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_transactions(request):
-    transactions = Transaction.objects.filter(user=request.user).select_related('category').order_by('-date')[:10]  # Fetch latest 10 transactions
+    transactions = Transaction.objects.filter(user=request.user).select_related('category').order_by('-date', '-created_at')[:10]  # Fetch latest 10 transactions
 
     data = [
         {
@@ -39,6 +39,7 @@ def get_transactions(request):
             "description": t.description,
             "amount": float(t.amount),
             "date": t.date.isoformat(),  # Convert date to JSON format
+            "created_at": t.created_at.isoformat(), # Added exact timestamp for sorting
         }
         for t in transactions
     ]
@@ -65,7 +66,7 @@ class TransactionListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Transaction.objects.filter(user_id=user.id).order_by('-date')
+        queryset = Transaction.objects.filter(user_id=user.id).order_by('-date', '-created_at')
         category = self.request.query_params.get('category', None)
         min_amount = self.request.query_params.get('min_amount', None)
         date = self.request.query_params.get('date', None)

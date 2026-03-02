@@ -63,8 +63,11 @@ async function fetchCategories() {
 }
 
 function renderTransactions(transactions) {
+    // Sort transactions chronologically using exact timestamp (LIFO Stack)
+    const sortedTransactions = transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
     const tbody = document.getElementById("transactionsList");
-    tbody.innerHTML = transactions.map(t => `
+    tbody.innerHTML = sortedTransactions.map(t => `
         <tr class="border-b">
             <td class="px-6 py-4 text-left">${t.date}</td>
             <td class="px-6 py-4 text-left">${t.category_name || 'Uncategorized'}</td>
