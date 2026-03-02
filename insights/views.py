@@ -199,6 +199,9 @@ def get_notifications(request):
 
     return Response(notifications_list)
 
+
+
+# View for Savings Goal
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_savings_goal(request):
@@ -212,12 +215,106 @@ def add_savings_goal(request):
     )
     return Response({"message": "Goal created successfully!", "goal_id": goal.id})
 
+
+# Saving goal progress
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_savings_progress(request):
-    """API to fetch user's savings goals and progress."""
-    goals = SavingsGoal.objects.filter(user=request.user).values()
+    """API to fetch user's savings goals and progress (excluding withdrawn goals)."""
+    goals = SavingsGoal.objects.filter(user=request.user).exclude(status="Withdrawn").values()
     return Response({"goals": list(goals)})
+
+from transactions.models import Transaction
+from django.db.models import Sum
+from django.utils.timezone import now
+
+# Update savings goal (Deposit button)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_goal_savings(request):
+    """API to add deposit to a savings goal."""
+    goal_id = request.data.get("goal_id")
+    deposit_amount = request.data.get("deposit_amount")
+    
+    try:
+        deposit_amount = float(deposit_amount)
+        if deposit_amount <= 0:
+            return Response({"error": "Invalid deposit amount."}, status=400)
+            
+        # Calculate current net balance
+        income = Transaction.objects.filter(user=request.user, category_type="income").aggregate(Sum('amount'))['amount__sum'] or 0
+        expense = Transaction.objects.filter(user=request.user, category_type="expense").aggregate(Sum('amount'))['amount__sum'] or 0
+        balance = float(income) - float(expense)
+        
+        if balance < deposit_amount:
+            return Response({"error": f"Insufficient balance! You only have ₹{balance:.2f} available."}, status=400)
+
+        goal = SavingsGoal.objects.get(id=goal_id, user=request.user)
+        
+        # Deduct deposit amount from main balance by logging it as an expense
+        Transaction.objects.create(
+            user=request.user,
+            amount=deposit_amount,
+            category_type="expense",
+            date=now().date(),
+            description=f"Deposit to Savings Goal: {goal.goal_name}"
+        )
+        
+        goal.saved_amount = float(goal.saved_amount) + deposit_amount
+        goal.update_progress()
+        goal.save()
+        return Response({"message": "Deposit added successfully.", "saved_amount": goal.saved_amount})
+    except SavingsGoal.DoesNotExist:
+        return Response({"error": "Goal not found."}, status=404)
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid deposit amount."}, status=400)
+
+# Withdraw completed savings goal
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def withdraw_goal_savings(request):
+    """API to withdraw a saved goal back into the main balance."""
+    goal_id = request.data.get("goal_id")
+    try:
+        goal = SavingsGoal.objects.get(id=goal_id, user=request.user)
+        
+        if goal.saved_amount < goal.target_amount:
+            return Response({"error": "You must reach your target goal before withdrawing."}, status=400)
+            
+        if goal.status == "Withdrawn":
+            return Response({"error": "This goal has already been withdrawn."}, status=400)
+            
+        # Add the saved money back into the main balance by logging it as Income
+        if goal.saved_amount > 0:
+            Transaction.objects.create(
+                user=request.user,
+                amount=goal.saved_amount,
+                category_type="income",
+                date=now().date(),
+                description=f"Withdrawal from Savings Goal: {goal.goal_name}"
+            )
+            
+        goal.status = "Withdrawn"
+        goal.save()
+        return Response({"message": "Goal successfully withdrawn and funds transferred to balance. Goal preserved in history."})
+    except SavingsGoal.DoesNotExist:
+        return Response({"error": "Goal not found."}, status=404)
+
+# Delete savings goal
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_savings_goal(request, goal_id):
+    """API to delete a savings goal."""
+    try:
+        goal = SavingsGoal.objects.get(id=goal_id, user=request.user)
+        goal.delete()
+        return Response({"message": "Goal deleted successfully."})
+    except SavingsGoal.DoesNotExist:
+        return Response({"error": "Goal not found."}, status=404)
+
+
+
+# Mark notifications as read
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_notifications_read(request):

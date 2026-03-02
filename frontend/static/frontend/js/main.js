@@ -696,6 +696,8 @@ if (document.getElementById('saveBudgetBtn')) {
     });
 }
 
+
+
 // Fetch Savings Goals for Dashboard
 async function fetchSavingsGoals() {
     try {
@@ -745,8 +747,11 @@ async function fetchSavingsGoals() {
                                 <p class="text-xs font-medium text-gray-500 mt-0.5">Target: ₹${target.toLocaleString('en-IN')} by ${deadline.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
                             </div>
                         </div>
-                        <div class="text-right">
+                        <div class="flex items-center gap-3 text-right">
                            ${statusBadge}
+                           <button onclick="deleteSavingsGoal(${goal.id})" class="text-gray-400 hover:text-red-500 transition" title="Delete Goal">
+                               <i class="ri-close-line text-lg"></i>
+                           </button>
                         </div>
                     </div>
                     
@@ -754,9 +759,19 @@ async function fetchSavingsGoals() {
                         <div class="${percentage >= 100 ? 'bg-green-500' : (isOverdue ? 'bg-red-500' : 'bg-blue-500')} h-full rounded-full transition-all duration-1000 ease-out" style="width: ${percentage}%"></div>
                     </div>
                     
-                    <div class="flex justify-between items-center text-xs font-bold">
+                    <div class="flex justify-between items-center text-xs font-bold mb-4">
                         <span class="text-gray-500">Saved: <span class="text-gray-900">₹${saved.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
                         <span class="text-gray-500">Left: <span class="text-gray-900">₹${Math.max(target - saved, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
+                    </div>
+                    
+                    <div class="flex justify-start gap-2">
+                        <button onclick="openDepositModal(${goal.id})" class="text-sm px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition">
+                            Add Deposit
+                        </button>
+                        ${percentage >= 100 ? `
+                        <button onclick="withdrawSavingsGoal(${goal.id})" class="text-sm px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition shadow-sm">
+                            Withdraw
+                        </button>` : ''}
                     </div>
                 </div>
             `;
@@ -799,4 +814,85 @@ if (document.getElementById('saveGoalBtn')) {
             alert("Failed to communicate with the server.");
         }
     });
+}
+
+// Deposit and Delete Logic
+let currentDepositGoalId = null;
+
+function openDepositModal(goalId) {
+    currentDepositGoalId = goalId;
+    document.getElementById('depositAmount').value = '';
+    document.getElementById('addDepositModal').classList.remove('hidden');
+}
+
+if (document.getElementById('saveDepositBtn')) {
+    document.getElementById('saveDepositBtn').addEventListener('click', async () => {
+        const amount = parseFloat(document.getElementById('depositAmount').value);
+        if (!amount || amount <= 0) {
+            alert("Please enter a valid deposit amount.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/insights/update-goal-savings/', {
+                method: 'POST',
+                headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken'), ...authHeaders },
+                body: JSON.stringify({ goal_id: currentDepositGoalId, deposit_amount: amount })
+            });
+            if (res.ok) {
+                document.getElementById('addDepositModal').classList.add('hidden');
+                fetchSavingsGoals();
+                if (typeof fetchDashboardData === 'function') fetchDashboardData();
+                else location.reload();
+            } else {
+                const data = await res.json();
+                alert(data.error || "Error adding deposit.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to communicate with the server.");
+        }
+    });
+}
+
+async function withdrawSavingsGoal(goalId) {
+    if (!confirm('Are you sure you want to withdraw this completed goal? The funds will be securely added back to your main balance.')) return;
+
+    try {
+        const res = await fetch(`/api/insights/withdraw-goal-savings/`, {
+            method: 'POST',
+            headers: { "Content-Type": "application/json", "X-CSRFToken": getCookie('csrftoken'), ...authHeaders },
+            body: JSON.stringify({ goal_id: goalId })
+        });
+        if (res.ok) {
+            fetchSavingsGoals();
+            if (typeof fetchDashboardData === 'function') fetchDashboardData();
+            else location.reload();
+        } else {
+            const data = await res.json();
+            alert(data.error || "Error withdrawing goal funds.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to communicate with the server.");
+    }
+}
+
+async function deleteSavingsGoal(goalId) {
+    if (!confirm('Are you sure you want to delete this goal?')) return;
+
+    try {
+        const res = await fetch(`/api/insights/delete-goal/${goalId}/`, {
+            method: 'DELETE',
+            headers: { "X-CSRFToken": getCookie('csrftoken'), ...authHeaders }
+        });
+        if (res.ok) {
+            fetchSavingsGoals();
+        } else {
+            alert("Error deleting goal.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to communicate with the server.");
+    }
 }
