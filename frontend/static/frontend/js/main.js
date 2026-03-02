@@ -113,43 +113,9 @@ if (cancelTransactionBtn) {
     });
 }
 
-// Fetch User Data from API
-
-async function fetchUserProfile() {
-    try {
-        const response = await fetch('/users/api/user-profile/', { headers: authHeaders });
-        const data = await response.json();
-        document.getElementById('userAvatar').src = data.avatar;
-        document.getElementById('userName').textContent = data.username;
-        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    } catch (error) {
-        console.error('Error fetching user profile:', error);
-    }
-}
-
-
-
-// Toggle User Dropdown Menu
-if (document.getElementById('userDropdownBtn')) {
-    document.getElementById('userDropdownBtn').addEventListener('click', () => {
-        document.getElementById('userDropdown').classList.toggle('hidden');
-    });
-}
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (event) => {
-    const dropdown = document.getElementById('userDropdown');
-    if (!document.getElementById('userDropdownBtn').contains(event.target) && !dropdown.contains(event.target)) {
-        dropdown.classList.add('hidden');
-    }
-});
-
-
-
 // Set Savings Progress Bar Width will be handled by fetchDashboardStats()
 
-// Load User Data on Page Load
-fetchUserProfile();
+// Load User Data handled by nav.js event listener
 
 // Initialize ECharts instances
 const incomeVsExpensesChart = echarts.init(document.getElementById('incomeVsExpensesChart'));
