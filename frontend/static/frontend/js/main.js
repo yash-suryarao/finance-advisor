@@ -445,8 +445,21 @@ fetchTransactions();
 
 
 async function fetchAIInsights() {
+    // Show loading state immediately to provide visual feedback during the LLM delay
+    const insightsBox = document.getElementById('aiInsightsBox');
+    if (insightsBox) {
+        insightsBox.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center p-12 text-blue-600 bg-blue-50 rounded-xl border border-blue-100">
+                <i class="ri-loader-4-line animate-spin text-3xl mb-3"></i>
+                <p class="text-sm font-semibold">Generating fresh AI Insights...</p>
+                <p class="text-xs text-blue-400 mt-1">Analyzing your latest transactions</p>
+            </div>
+        `;
+    }
+
     try {
-        const response = await fetch('/api/insights/ai-insights/', { headers: authHeaders });
+        // Add timestamp to bypass browser cache and force a fresh LLM generation
+        const response = await fetch(`/api/insights/ai-insights/?t=${new Date().getTime()}`, { headers: authHeaders });
         const data = await response.json();
 
         document.getElementById('aiInsightsBox').innerHTML = '';
@@ -458,14 +471,13 @@ async function fetchAIInsights() {
         }
 
         data.forEach(insight => {
-            let isWarning = insight.type === 'Anomaly' || insight.type === 'Budget';
-            let borderColor = isWarning ? 'border-red-500' : 'border-blue-500';
-            let bgColor = isWarning ? 'bg-red-50' : 'bg-blue-50';
-            let iconColor = isWarning ? 'text-red-500' : 'text-blue-500';
-            let titleColor = isWarning ? 'text-red-700' : 'text-blue-700';
-            let textColor = isWarning ? 'text-red-600' : 'text-blue-600';
-            let subtleTextColor = isWarning ? 'text-red-400' : 'text-blue-400';
-            let btnColor = isWarning ? 'text-red-700 hover:text-red-800' : 'text-blue-700 hover:text-blue-800';
+            let borderColor = 'border-blue-500';
+            let bgColor = 'bg-blue-50';
+            let iconColor = 'text-blue-500';
+            let titleColor = 'text-blue-700';
+            let textColor = 'text-blue-600';
+            let subtleTextColor = 'text-blue-400';
+            let btnColor = 'text-blue-700 hover:text-blue-800';
 
             let icon = 'ri-information-line';
             if (insight.type === 'Anomaly') icon = 'ri-error-warning-line';
@@ -473,27 +485,30 @@ async function fetchAIInsights() {
             else if (insight.type === 'Budget') icon = 'ri-scissors-cut-line';
 
             document.getElementById('aiInsightsBox').innerHTML += `
-                <div class="${bgColor} rounded-xl border-l-4 ${borderColor} p-5 hover:shadow-sm transition">
-                    <div class="flex items-start mb-2">
-                        <i class="${icon} ${iconColor} text-lg mr-2 mt-0.5"></i>
-                        <h4 class="text-sm font-bold ${titleColor} leading-tight">${insight.title}</h4>
+                <div class="${bgColor} rounded-xl border-l-4 ${borderColor} p-5 flex flex-col justify-between hover:shadow-sm transition">
+                    <div>
+                        <div class="flex items-start mb-2">
+                            <i class="${icon} ${iconColor} text-lg mr-2 mt-0.5"></i>
+                            <h4 class="text-sm font-bold ${titleColor} leading-tight">${insight.title}</h4>
+                        </div>
+                        <p class="text-sm ${textColor} mb-4 ml-6 leading-relaxed line-clamp-3">${insight.description}</p>
                     </div>
-                    <p class="text-sm ${textColor} mb-4 ml-6 leading-relaxed">${insight.description}</p>
-                    <div class="ml-6 flex items-center justify-between">
+                    <div class="ml-6 flex items-center justify-between mt-auto pt-2 border-t border-blue-100">
                         <span class="text-xs font-semibold ${subtleTextColor}">Category: <span class="uppercase tracking-wide">${insight.category}</span></span>
-                        <button onclick="showAIModal('${encodeURIComponent(insight.title)}', '${encodeURIComponent(insight.llm_details)}')" class="text-xs font-bold ${btnColor} flex items-center">View Details <i class="ri-arrow-right-line ml-1"></i></button>
+                        <button onclick="showAIModal('${encodeURIComponent(insight.title).replace(/'/g, "%27")}', '${encodeURIComponent(insight.category).replace(/'/g, "%27")}')" class="text-xs font-bold ${btnColor} flex items-center bg-blue-100 px-2 py-1 rounded-md hover:bg-blue-200 transition">View Details <i class="ri-arrow-right-line ml-1"></i></button>
                     </div>
                 </div>
             `;
         });
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Error fetching AI insights:', error);
     }
 }
 
-function showAIModal(title, details) {
-    const rawTitle = decodeURIComponent(title);
-    const rawDetails = decodeURIComponent(details);
+async function showAIModal(encodedTitle, encodedCategory) {
+    const rawTitle = decodeURIComponent(encodedTitle);
+    const category = decodeURIComponent(encodedCategory);
 
     let modal = document.getElementById('aiInsightModal');
     if (!modal) {
@@ -501,18 +516,18 @@ function showAIModal(title, details) {
         modal.id = 'aiInsightModal';
         modal.className = 'fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity';
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all scale-100 p-6 relative">
-                <button onclick="document.getElementById('aiInsightModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition">
-                    <i class="ri-close-line text-2xl"></i>
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden transform transition-all scale-100 p-6 relative max-h-[85vh] flex flex-col">
+                <button onclick="document.getElementById('aiInsightModal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition z-10 w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full">
+                    <i class="ri-close-line text-xl"></i>
                 </button>
-                <div class="flex items-center mb-4">
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
-                        <i class="ri-sparkling-fill text-indigo-600 text-xl"></i>
+                <div class="flex items-center mb-5 shrink-0 pr-8">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="ri-sparkling-fill text-indigo-600 text-2xl"></i>
                     </div>
-                    <h3 id="aiModalTitle" class="text-xl font-bold text-gray-900 leading-tight">AI Insight</h3>
+                    <h3 id="aiModalTitle" class="text-2xl font-bold text-gray-900 leading-tight">AI Insight</h3>
                 </div>
-                <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl relative">
-                    <p id="aiModalDetails" class="text-indigo-900 text-sm leading-relaxed"></p>
+                <div class="p-5 bg-indigo-50 border border-indigo-100 rounded-xl relative overflow-y-auto custom-scrollbar flex-1">
+                    <div id="aiModalDetails" class="text-indigo-950 text-[15px] leading-relaxed"></div>
                 </div>
                 <div class="mt-6 flex justify-end">
                     <button onclick="document.getElementById('aiInsightModal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition duration-200">Got it</button>
@@ -522,9 +537,34 @@ function showAIModal(title, details) {
         document.body.appendChild(modal);
     }
 
-    document.getElementById('aiModalTitle').innerText = rawTitle;
-    document.getElementById('aiModalDetails').innerText = rawDetails;
+    // Show modal immediately with loading spinner
+    document.getElementById('aiModalTitle').innerHTML = rawTitle;
+    document.getElementById('aiModalDetails').innerHTML = `
+        <div class="flex flex-col items-center justify-center py-10 text-indigo-500">
+            <i class="ri-loader-4-line animate-spin text-4xl mb-3"></i>
+            <p class="text-sm font-semibold">Generating AI analysis for <strong>${category}</strong>...</p>
+            <p class="text-xs text-indigo-400 mt-1">This may take a few seconds</p>
+        </div>`;
     modal.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/api/insights/category-detail/?category=${encodeURIComponent(category)}`, { headers: authHeaders });
+        const data = await res.json();
+        let rawDetails = data.llm_details || 'No analysis available.';
+
+        // Parse Markdown
+        rawDetails = rawDetails
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/### (.*?)\n/g, '<h4 class="font-bold text-lg mt-4 mb-2 text-indigo-900">$1</h4>\n')
+            .replace(/## (.*?)\n/g, '<h3 class="font-bold text-xl mt-5 mb-3 text-indigo-950 border-b border-indigo-200 pb-1">$1</h3>\n')
+            .replace(/\n/g, '<br>');
+
+        document.getElementById('aiModalDetails').innerHTML = rawDetails;
+    } catch (err) {
+        document.getElementById('aiModalDetails').innerHTML = `<p class="text-red-500 text-sm">Failed to load analysis. Please try again.</p>`;
+        console.error('Category insight fetch error:', err);
+    }
 }
 
 fetchAIInsights();

@@ -138,7 +138,7 @@ DATABASES = {
 }
 
 
-GEMINI_API_KEY = "AIzaSyAUxS0sInmMHYUdd7KVSdy1bJbPFnNA3Ho"
+GEMINI_API_KEY = "AIzaSyBS25A-C8-aBzDjIQZLD9_t8pRnEZVzFTU"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

@@ -22,9 +22,9 @@ from .serializers import BudgetInsightSerializer
 @permission_classes([IsAuthenticated])
 def ai_insights(request):
     """
-    Generates AI insights based on predictive forecasting and transaction limits.
+    Returns category-wise ML insights. LLM summaries are NOT generated here.
+    They are fetched lazily via the category_insight_detail endpoint on user click.
     """
-    # Trigger the new ML Pipeline
     insights = get_advanced_ai_insights(request.user)
 
     if not insights:
@@ -34,10 +34,64 @@ def ai_insights(request):
             "description": "Start adding transactions and a budget to receive personalized AI financial forecasts.",
             "category": "All",
             "data_point": 0.0,
-            "llm_details": "Keep using the app and wait for more data to be collected."
+            "llm_details": ""
         })
 
     return Response(insights)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def category_insight_detail(request):
+    """
+    On-demand LLM insight for a SINGLE category (called when user clicks 'View Details').
+    Only fires one Gemini API call, preventing free-tier quota exhaustion.
+    """
+    from insights.utils import get_user_transactions_df, generate_category_llm_insight, detect_anomalies, forecast_spending, suggest_smart_budgets
+    import pandas as pd
+    
+    category = request.GET.get('category', '').strip()
+    if not category:
+        return Response({'error': 'Category name is required.'}, status=400)
+
+    user = request.user
+    df = get_user_transactions_df(user)
+    if df.empty:
+        return Response({'llm_details': 'No transaction data found for analysis.'})
+
+    # Filter to just this category's expenses
+    cat_df = df[(df['category'] == category) & (df['type'] == 'Expense')]
+    if cat_df.empty:
+        return Response({'llm_details': f'No expense data found for category: {category}'})
+
+    current_month_str = df['date'].dt.to_period('M').max()
+    prev_month_str = current_month_str - 1
+
+    curr_total = cat_df[cat_df['date'].dt.to_period('M') == current_month_str]['amount'].sum()
+    prev_total = cat_df[cat_df['date'].dt.to_period('M') == prev_month_str]['amount'].sum()
+    pct_change = ((curr_total - prev_total) / prev_total * 100) if prev_total > 0 else (100 if curr_total > 0 else 0)
+
+    anomalies = detect_anomalies(user)
+    forecasts = forecast_spending(user)
+    budgets = suggest_smart_budgets(user)
+
+    anomaly_map = {a['category']: a for a in anomalies}
+    forecast_map = {f['category']: f for f in forecasts}
+    budget_map = {b['category']: b for b in budgets}
+
+    category_data = {
+        'category': category,
+        'current_month_spending': float(curr_total),
+        'previous_month_spending': float(prev_total),
+        'percentage_change': float(round(pct_change, 2)),
+        'anomaly_flag': category in anomaly_map,
+        'anomaly_details': anomaly_map[category]['description'] if category in anomaly_map else 'None',
+        'forecasted_next_month_spending': float(forecast_map.get(category, {}).get('data_point', 0.0)),
+        'recommended_budget_limit': float(budget_map.get(category, {}).get('data_point', 0.0)),
+    }
+
+    llm_summary = generate_category_llm_insight(category_data)
+    return Response({'llm_details': llm_summary})
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

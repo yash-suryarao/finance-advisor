@@ -1,0 +1,57 @@
+user_id,date,amount,category,type,description
+dc0cb97e-5227-44b8-a5d1-bf81270775e9,2026-02-01,2000.0,Bills,Expense,Test Transaction 2
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-01,1000.0,Bills,Expense,Test Transaction 5
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-07,50.0,Entertainment,Expense,Test Transaction 4
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-12,80.0,Food,Expense,Transaction Test 6
+dc0cb97e-5227-44b8-a5d1-bf81270775e9,2026-02-21,10000.0,Salary,Income,
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-21,100.0,Other,Expense,Test Transaction 3
+dc0cb97e-5227-44b8-a5d1-bf81270775e9,2026-02-22,150.0,Food,Expense,Post test
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-22,150.0,Food,Expense,
+dc0cb97e-5227-44b8-a5d1-bf81270775e9,2026-02-22,100.0,Transport,Expense,
+dc0cb97e-5227-44b8-a5d1-bf81270775e9,2026-02-22,1000.0,Other,Income,Slary Credited
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-22,500.0,Other,Income,Test Transaction 1
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-22,100.0,Other,Expense,Test Transaction 2
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-22,1000.0,Other,Income,Test Transaction 1
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-22,1000.0,Other,Income,Test Transaction 2
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-22,100.0,Other,Income,Test Transaction 3
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-23,2340.0,Shopping,Expense,
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-24,1560.0,Transport,Expense,
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-24,3500.0,Food,Expense,
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-25,80.0,Food,Expense,
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-25,10.0,Food,Expense,Thali
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-25,20000.0,Salary,Income,Company Salary
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-25,100.0,Shopping,Expense,Bought bag
+dc5ec884-91cc-4991-bce7-64a8990bcee3,2026-02-25,1000.0,Other,Expense,Pocket money
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-25,160.0,Food,Expense,
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-25,160.0,Food,Expense,
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-25,25000.0,Salary,Income,
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-25,11500.0,Bills,Expense,
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Food,Expense,Thali
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Salary,Income,Test income 1
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Food,Expense,Biryani
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Salary,Income,Test salary 2
+625e5c6b-0c61-46fc-96bc-0f77d2cd79e4,2026-02-25,6000.0,Other,Expense,Party
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,1000.0,Other,Expense,Income 3
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,300.0,Shopping,Expense,Cloths
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,200.0,Bills,Expense,Bills
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,1000.0,Shopping,Expense,
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Other,Expense,
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Other,Expense,
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,300.0,Salary,Income,
+481b0735-cd58-495e-bfe9-a63773645765,2026-02-25,100.0,Salary,Income,
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-26,100.0,Food,Expense,Lunch
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-02-27,2500.0,Other,Expense,From Friends
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-01,1000.0,Other,Income,Test income
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,1000.0,Other,Expense,Deposit to Savings Goal: Test Goal 1
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,1000.0,Other,Income,Withdrawal from Savings Goal: Test Goal 1
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,2500.0,Other,Expense,Deposit to Savings Goal: Birthday
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,2750.0,Other,Income,Withdrawal from Savings Goal: Birthday
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,25.0,Other,Expense,Deposit to Savings Goal: Birthday
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,2475.0,Other,Expense,Deposit to Savings Goal: Birthday
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,2500.0,Other,Income,Withdrawal from Savings Goal: Birthday
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,2500.0,Salary,Income,Test Salary
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,1000.0,Bills,Expense,Paying House Bill
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,870.0,Food,Expense,Thali
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,1.0,Other,Income,Test
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-02,400.0,Other,Expense,Give to Friend
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-05,1200.0,Bills,Expense,Test Expense 1
