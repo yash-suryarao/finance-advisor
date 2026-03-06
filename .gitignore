@@ -1,1 +1,23 @@
-venv
+venv/
+
+# Environment variables - NEVER commit this
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Django
+db.sqlite3
+*.sqlite3
+media/
+
+# Test/scratch scripts
+run_test.py
+
+# IDE
+.vscode/
+.idea/

@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
-
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,10 +24,10 @@ STATICFILES_DIRS = [
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%5w*&iy%bmgsd#f^_cxlpm25sh-6f@a&1si+^-1f1$@gz_awuj'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-only-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ["*"]
 
@@ -138,7 +138,7 @@ DATABASES = {
 }
 
 
-GEMINI_API_KEY = "AIzaSyBS25A-C8-aBzDjIQZLD9_t8pRnEZVzFTU"
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
