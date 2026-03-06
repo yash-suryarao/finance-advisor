@@ -5,7 +5,7 @@ const authHeaders = {
 
 let allTransactions = [];
 let currentPeriod = 'month';
-let sortKey = 'date';
+let sortKey = null; // null = use backend default stack order (-date, -created_at)
 let sortAsc = false;
 let activeCategoryFilter = null;
 
@@ -302,12 +302,14 @@ function renderFilteredTable() {
     if (!isNaN(amtVal)) txs = txs.filter(t => parseFloat(t.amount) >= amtVal);
     if (searchVal) txs = txs.filter(t => (t.description || '').toLowerCase().includes(searchVal));
 
-    // Sort
-    txs.sort((a, b) => {
-        let va = a[sortKey], vb = b[sortKey];
-        if (sortKey === 'amount') { va = parseFloat(va); vb = parseFloat(vb); }
-        return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
-    });
+    // Sort only if user clicked a column header
+    if (sortKey) {
+        txs.sort((a, b) => {
+            let va = a[sortKey], vb = b[sortKey];
+            if (sortKey === 'amount') { va = parseFloat(va); vb = parseFloat(vb); }
+            return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+        });
+    }
 
     renderTransactions(txs);
 }
@@ -361,11 +363,14 @@ function renderTransactions(transactions) {
     `).join('');
 }
 
+let allCategoriesList = [];
+
 // ── Fetch categories for filter + modal ──────────
 async function fetchCategories() {
     try {
         const res = await fetch("/api/transactions/categories/", { headers: authHeaders });
         const categories = await res.json();
+        allCategoriesList = categories;
         const modalSel = document.getElementById("transactionCategory");
         const filterSel = document.getElementById("filterCategory");
         const opts = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
@@ -377,21 +382,85 @@ async function fetchCategories() {
 }
 
 // ── Add Transaction ───────────────────────────────
+
+// Debounced auto-categorizer
+let categorizeTimeout = null;
+const descInput = document.getElementById("transactionDescription");
+const catSelect = document.getElementById("transactionCategory");
+const typeSelect = document.getElementById("transactionType");
+const loadingSpan = document.getElementById("categoryLoading");
+
+if (descInput) {
+    descInput.addEventListener("input", (e) => {
+        clearTimeout(categorizeTimeout);
+        const text = e.target.value.trim();
+
+        if (text.length < 3) {
+            if (loadingSpan) loadingSpan.classList.add("hidden");
+            return;
+        }
+
+        if (loadingSpan) loadingSpan.classList.remove("hidden");
+
+        categorizeTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch("/api/transactions/categorize/", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...authHeaders },
+                    body: JSON.stringify({ description: text })
+                });
+                const data = await res.json();
+
+                if (data.category) {
+                    // Find if the category exists in the dropdown
+                    const exists = Array.from(catSelect.options).some(opt => opt.value === data.category);
+                    if (exists) {
+                        catSelect.value = data.category;
+                        // Auto-set type to Income if Salary, else Expense
+                        if (data.category === "Salary" || data.category === "Bonus" || data.category === "Freelance" || data.category.includes("Income") || data.category.includes("Returns")) {
+                            typeSelect.value = "income";
+                        } else {
+                            typeSelect.value = "expense";
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Auto-categorize failed:", err);
+            } finally {
+                if (loadingSpan) loadingSpan.classList.add("hidden");
+            }
+        }, 500); // Wait 500ms after user stops typing
+    });
+}
+
 async function submitTransaction(event) {
     event.preventDefault();
+
+    // Map the selected category name back to its ID for the Django backend
+    const selectedCatName = catSelect.value;
+    const catObj = allCategoriesList.find(c => c.name === selectedCatName);
+
     const newTransaction = {
         date: document.getElementById("transactionDate").value,
-        category_type: document.getElementById("transactionType").value,
-        category: document.getElementById("transactionCategory").value,
+        category_type: typeSelect.value,
+        category: catObj ? catObj.id : null,
         amount: parseFloat(document.getElementById("transactionAmount").value),
-        description: document.getElementById("transactionDescription").value,
+        description: descInput.value,
     };
     try {
-        await fetch("/api/transactions/", {
+        const res = await fetch("/api/transactions/", {
             method: "POST",
             headers: { "Content-Type": "application/json", ...authHeaders },
             body: JSON.stringify(newTransaction),
         });
+
+        if (!res.ok) {
+            const err = await res.json();
+            console.error("Failed to save:", err);
+            alert("Error adding transaction. Check console.");
+            return;
+        }
+
         closeAddModal();
         await fetchAllData();
     } catch (e) {

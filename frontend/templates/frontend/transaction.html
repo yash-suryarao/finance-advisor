@@ -184,7 +184,10 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Category</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">
+                            Category <span id="categoryLoading"
+                                class="hidden text-xs text-violet-600 ml-2 font-normal">(Auto-detecting...)</span>
+                        </label>
                         <select id="transactionCategory" required
                             class="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"></select>
                     </div>

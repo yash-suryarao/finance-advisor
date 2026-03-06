@@ -123,13 +123,25 @@ class CategoryListView(generics.ListAPIView):
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        queryset = Category.objects.filter(user=self.request.user)
-        if not queryset.exists():
-            default_categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Salary', 'Entertainment', 'Other']
-            for name in default_categories:
-                Category.objects.create(user=self.request.user, name=name)
-            queryset = Category.objects.filter(user=self.request.user)
-        return queryset
+        user = self.request.user
+        default_categories = [
+            # Expenses
+            "Food & Dining", "Transport", "Shopping", "Bills & Utilities",
+            "Entertainment", "Health & Medical", "Education", "Rent & Housing",
+            "Personal Care", "Travel", "EMI & Loans", "Investments",
+            "Gifts & Donations", "Subscriptions", "Miscellaneous",
+            # Income
+            "Salary", "Freelance", "Business", "Investment Returns",
+            "Rental Income", "Bonus", "Other Income",
+        ]
+        existing_names = set(
+            Category.objects.filter(user=user).values_list('name', flat=True)
+        )
+        # Add any missing categories (works for both new and existing users)
+        for name in default_categories:
+            if name not in existing_names:
+                Category.objects.create(user=user, name=name)
+        return Category.objects.filter(user=user).order_by('name')
 
 
 
@@ -153,3 +165,23 @@ class BudgetHistoryView(generics.ListAPIView):
             year=self.request.query_params.get('year')
         )
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def categorize_description(request):
+    """
+    Accepts a transaction description and returns the predicted category name.
+    Used for live auto-selection in the Add Transaction modal.
+    """
+    description = request.data.get('description', '').strip()
+    if not description:
+        return Response({'category': 'Other'})
+
+    try:
+        from .categorizer import categorize_transaction
+        predicted = categorize_transaction(description)
+        return Response({'category': predicted})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Categorize endpoint error: {e}")
+        return Response({'category': 'Other'})

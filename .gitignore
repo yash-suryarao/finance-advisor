@@ -15,9 +15,6 @@ db.sqlite3
 *.sqlite3
 media/
 
-# Test/scratch scripts
-run_test.py
-
 # IDE
 .vscode/
 .idea/
