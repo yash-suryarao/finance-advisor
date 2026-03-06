@@ -198,42 +198,42 @@
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- AI Insights Section -->
-        <div class="grid grid-cols-1 gap-6 mb-8 mt-2">
-            <!-- AI Insights (Full width) -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900">AI Financial Insights</h3>
-                    <i class="ri-refresh-line text-gray-400 cursor-pointer hover:text-gray-700 transition text-xl"
-                        onclick="fetchAIInsights()" title="Refresh Insights"></i>
-                </div>
-                <div class="relative flex-1">
-                    <div id="aiInsightsBox"
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                        <!-- AI insights populated here via JS -->
-                        <div
-                            class="col-span-full flex items-center justify-center h-full text-sm font-medium text-gray-500 py-10 w-full">
-                            Loading insights...</div>
+            <!-- AI Insights Section -->
+            <div class="mb-8">
+                <!-- AI Insights (Full width) -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900">AI Financial Insights</h3>
+                        <i class="ri-refresh-line text-gray-400 cursor-pointer hover:text-gray-700 transition text-xl"
+                            onclick="fetchAIInsights()" title="Refresh Insights"></i>
+                    </div>
+                    <div class="relative flex-1">
+                        <div id="aiInsightsBox"
+                            class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-fr">
+                            <!-- AI insights populated here via JS -->
+                            <div
+                                class="col-span-full flex items-center justify-center text-sm font-medium text-gray-500 py-10 w-full">
+                                Loading insights...</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Savings Goals Section -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 mt-2 ">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Savings Goals</h3>
-                <button onclick="document.getElementById('addGoalModal').classList.remove('hidden')"
-                    class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
-                    <i class="ri-add-line mr-1 text-lg"></i> Add Goal
-                </button>
-            </div>
-            <div id="savingsGoalsList" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Savings goals populated here via JS -->
-                <div class="col-span-full flex items-center justify-center text-sm font-medium text-gray-500 py-10">
-                    Loading goals...</div>
+            <!-- Savings Goals Section -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">Savings Goals</h3>
+                    <button onclick="document.getElementById('addGoalModal').classList.remove('hidden')"
+                        class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
+                        <i class="ri-add-line mr-1 text-lg"></i> Add Goal
+                    </button>
+                </div>
+                <div id="savingsGoalsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Savings goals populated here via JS -->
+                    <div class="col-span-full flex items-center justify-center text-sm font-medium text-gray-500 py-10">
+                        Loading goals...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -371,7 +371,7 @@
             </div>
         </div>
     </div>
-    <script src="{% static 'frontend/js/main.js' %}?v=3.7"></script>
+    <script src="{% static 'frontend/js/main.js' %}?v=3.8"></script>
     <!-- Include Global Nav JS -->
     <script src="{% static 'frontend/js/nav.js' %}?v=1.1"></script>
 </body>

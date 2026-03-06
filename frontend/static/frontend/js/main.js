@@ -745,18 +745,18 @@ async function fetchSavingsGoals() {
             }
 
             goalsList.innerHTML += `
-                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
+                <div class="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition flex flex-col min-w-0">
+                    <div class="flex justify-between items-start mb-4 gap-2">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-11 h-11 shrink-0 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
                                 <i class="ri-flag-fill text-xl"></i>
                             </div>
-                            <div>
-                                <h4 class="font-bold text-gray-900">${goal.goal_name}</h4>
+                            <div class="min-w-0">
+                                <h4 class="font-bold text-gray-900 truncate">${goal.goal_name}</h4>
                                 <p class="text-xs font-medium text-gray-500 mt-0.5">Target: ₹${target.toLocaleString('en-IN')} by ${deadline.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-3 text-right">
+                        <div class="flex items-center gap-2 shrink-0">
                            ${statusBadge}
                            <button onclick="deleteSavingsGoal(${goal.id})" class="text-gray-400 hover:text-red-500 transition" title="Delete Goal">
                                <i class="ri-close-line text-lg"></i>
@@ -773,8 +773,8 @@ async function fetchSavingsGoals() {
                         <span class="text-gray-500">Left: <span class="text-gray-900">₹${Math.max(target - saved, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></span>
                     </div>
                     
-                    <div class="flex justify-start gap-2">
-                        <button onclick="openDepositModal(${goal.id})" class="text-sm px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition">
+                    <div class="flex flex-wrap gap-2 mt-auto">
+                        <button onclick="openDepositModal(${goal.id})" class="text-sm px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg transition">
                             Add Deposit
                         </button>
                         ${percentage >= 100 ? `
