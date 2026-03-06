@@ -10,57 +10,62 @@
 
 <body class="min-h-screen bg-gradient">
     <div class="min-h-screen flex items-center justify-center py-12 px-4">
-        <div class="max-w-md w-full bg-white/90 login-card rounded-xl p-8">
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold text-gray-900">Welcome Back</h2>
-                <p class="mt-2 text-sm text-gray-600">Please sign in to your account</p>
+        <div class="max-w-md w-full">
+            <div class="mb-8 text-center">
+                <h1 class="text-4xl font-bold text-purple-600 mb-2">AI Finance Tracker</h1>
+                <p class="text-indigo-600">Start your financial journey with AI-powered insights</p>
             </div>
-            <form id="loginForm">
-                <label class="block text-sm font-medium text-gray-700">Username</label>
-                <input type="text" id="username" required
-                    class="input-field block w-full pl-3 py-3 border border-gray-200 rounded-button text-sm"
-                    placeholder="Enter your email">
+            <div class="bg-white/90 login-card rounded-xl p-8">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900">Welcome Back</h2>
+                    <p class="mt-2 text-sm text-gray-600">Please sign in to your account</p>
+                </div>
+                <form id="loginForm">
+                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" required
+                        class="input-field block w-full pl-3 py-3 border border-gray-200 rounded-button text-sm"
+                        placeholder="Enter your email">
 
-                <label class="block text-sm font-medium text-gray-700 mt-4">Password</label>
-                <input type="password" id="password" required
-                    class="input-field block w-full pl-3 py-3 border border-gray-200 rounded-button text-sm"
-                    placeholder="Enter your password">
+                    <label class="block text-sm font-medium text-gray-700 mt-4">Password</label>
+                    <input type="password" id="password" required
+                        class="input-field block w-full pl-3 py-3 border border-gray-200 rounded-button text-sm"
+                        placeholder="Enter your password">
 
-                <button type="submit" class="w-full mt-6 py-3 bg-purple-600 text-white rounded-lg font-medium">Sign
-                    in</button>
-            </form>
+                    <button type="submit" class="w-full mt-6 py-3 bg-purple-600 text-white rounded-lg font-medium">Sign
+                        in</button>
+                </form>
 
-            <p id="errorMessage" class="text-red-500 text-sm mt-4 hidden"></p>
-            <p class="mt-6 text-center text-sm text-gray-600">Don't have an account? <a href="{% url 'signup' %}"
-                    class="text-purple-600 hover:text-purple-500 font-medium">Sign up</a></p>
+                <p id="errorMessage" class="text-red-500 text-sm mt-4 hidden"></p>
+                <p class="mt-6 text-center text-sm text-gray-600">Don't have an account? <a href="{% url 'signup' %}"
+                        class="text-purple-600 hover:text-purple-500 font-medium">Sign up</a></p>
+            </div>
         </div>
-    </div>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
+        <script>
+            document.getElementById('loginForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
 
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
 
-            const response = await fetch('/users/login/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                const response = await fetch('/users/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    window.location.href = '/dashboard/';  // Redirect to dashboard
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorMessage').classList.remove('hidden');
+                }
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                localStorage.setItem('access_token', data.access);
-                localStorage.setItem('refresh_token', data.refresh);
-                window.location.href = '/dashboard/';  // Redirect to dashboard
-            } else {
-                document.getElementById('errorMessage').textContent = data.error;
-                document.getElementById('errorMessage').classList.remove('hidden');
-            }
-        });
-    </script>
+        </script>
 </body>
 
 </html>
