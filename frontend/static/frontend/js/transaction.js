@@ -208,29 +208,73 @@ function renderTrendChart(transactions) {
 
     const option = {
         tooltip: {
-            trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) =>
-                params.map(p => `${p.marker} ${p.seriesName}: ₹${p.value.toLocaleString('en-IN')}`).join('<br>')
+            trigger: 'axis', axisPointer: { type: 'shadow' },
+            formatter: (params) =>
+                params.map(p => `${p.marker} ${p.seriesName}: ₹${(p.value || 0).toLocaleString('en-IN')}`).join('<br>')
         },
-        legend: { top: 0, data: ['Income', 'Expenses', 'Savings'], textStyle: { fontSize: 12 } },
-        grid: { top: 40, bottom: 20, left: 60, right: 20, containLabel: true },
-        xAxis: { type: 'category', data: months.map(m => m.label), axisLabel: { fontSize: 11 } },
-        yAxis: { type: 'value', axisLabel: { formatter: v => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v), fontSize: 11 } },
+        legend: {
+            top: 4,
+            data: [
+                { name: 'Income', icon: 'circle', itemStyle: { color: '#22c55e' } },
+                { name: 'Expenses', icon: 'circle', itemStyle: { color: '#ef4444' } },
+                { name: 'Savings', icon: 'rect', itemStyle: { color: '#3b82f6' } }
+            ],
+            textStyle: { fontSize: 12 }
+        },
+        grid: { top: 48, bottom: 8, left: 10, right: 20, containLabel: true },
+        xAxis: {
+            type: 'category',
+            data: months.map(m => m.label),
+            axisLabel: { fontSize: 11 },
+            axisTick: { show: false },
+            axisLine: { show: false }
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: '#f1f5f9' } },
+            axisLine: { show: false },
+            axisTick: { show: false },
+            axisLabel: {
+                fontSize: 11,
+                formatter: v => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + ',000' : v)
+            }
+        },
         series: [
             {
-                name: 'Income', type: 'bar', barWidth: '25%', data: incomeArr,
-                itemStyle: { color: '#4ade80', borderRadius: [4, 4, 0, 0] },
-                markPoint: { data: [{ type: 'max', symbol: 'circle', symbolSize: 10, itemStyle: { color: '#16a34a' } }] }
+                // Savings — blue bars when positive, red when deficit
+                name: 'Savings',
+                type: 'bar',
+                barMaxWidth: 60,
+                data: savingsArr.map(v => ({
+                    value: v,
+                    itemStyle: {
+                        color: v >= 0 ? '#3b82f6' : '#f87171',
+                        borderRadius: v >= 0 ? [3, 3, 0, 0] : [0, 0, 3, 3]
+                    }
+                })),
+                z: 1
             },
             {
-                name: 'Expenses', type: 'bar', barWidth: '25%', data: expenseArr,
-                itemStyle: { color: '#60a5fa', borderRadius: [4, 4, 0, 0] },
-                markPoint: { data: [{ type: 'max', symbol: 'circle', symbolSize: 10, itemStyle: { color: '#ef4444' } }] }
+                // Income — dashed green line with circle dots
+                name: 'Income',
+                type: 'line',
+                data: incomeArr,
+                symbol: 'circle',
+                symbolSize: 9,
+                lineStyle: { color: '#22c55e', width: 1.5, type: 'dashed' },
+                itemStyle: { color: '#22c55e', borderWidth: 2, borderColor: '#fff' },
+                z: 3
             },
             {
-                name: 'Savings', type: 'line', data: savingsArr,
-                smooth: true, symbol: 'circle', symbolSize: 6,
-                lineStyle: { color: '#a855f7', width: 2 },
-                itemStyle: { color: '#a855f7' }
+                // Expenses — dashed red line with circle dots
+                name: 'Expenses',
+                type: 'line',
+                data: expenseArr,
+                symbol: 'circle',
+                symbolSize: 9,
+                lineStyle: { color: '#ef4444', width: 1.5, type: 'dashed' },
+                itemStyle: { color: '#ef4444', borderWidth: 2, borderColor: '#fff' },
+                z: 3
             }
         ]
     };
