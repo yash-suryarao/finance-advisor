@@ -16,6 +16,9 @@ from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum
 
+# ==========================================
+# 1. USER PROFILE & SETTINGS
+# ==========================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -34,7 +37,9 @@ def update_avatar(request):
         return Response({"message": "Avatar updated successfully!", "avatar": user.avatar.url})
     return Response({"error": "No file uploaded"}, status=400)
 
-
+# ==========================================
+# 2. CORE AUTHENTICATION
+# ==========================================
 
 class SignupView(APIView):
     def post(self, request):
@@ -114,6 +119,10 @@ class ProfileSetupView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return Profile.objects.get_or_create(user=self.request.user)[0]
 
+# ==========================================
+# 3. FINANCIAL CONFIGS
+# ==========================================
+
 class FinancialInputView(generics.RetrieveUpdateAPIView):
     """Handles Financial Inputs"""
     queryset = FinancialData.objects.all()
@@ -158,7 +167,9 @@ def user_profile(request):
     }
     return JsonResponse(profile_data)
 
-### 🚀 User Notifications API ###
+# ==========================================
+# 4. NOTIFICATIONS API
+# ==========================================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_notifications(request):
@@ -183,16 +194,3 @@ def user_notifications(request):
     ]
 
     return JsonResponse(notifications_list, safe=False)
-
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            refresh_token = request.data.get("refresh_token")
-            if refresh_token:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            return Response({"message": "Successfully logged out."}, status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
-            return Response({"error": "Invalid token or logout failed."}, status=status.HTTP_400_BAD_REQUEST)

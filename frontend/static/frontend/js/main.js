@@ -1,5 +1,7 @@
-const voiceEntryBtn = document.getElementById('voiceEntryBtn');
-const transactionModal = document.getElementById('transactionModal');
+// ==========================================
+// 1. GLOBAL STATE & SETUP
+// ==========================================
+
 const authHeaders = {
     "Authorization": `Bearer ${localStorage.getItem('access_token')}`
 };
@@ -16,106 +18,14 @@ window.fetch = async function () {
     }
     return response;
 };
-const editAmount = document.getElementById('editAmount');
-const editCategory = document.getElementById('editCategory');
-const editType = document.getElementById('editType');
-const saveTransactionBtn = document.getElementById('saveTransaction');
-const cancelTransactionBtn = document.getElementById('cancelTransaction');
-
-if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-
-    recognition.continuous = false;
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    if (voiceEntryBtn) {
-        voiceEntryBtn.addEventListener('click', () => {
-            recognition.start();
-            alert("Listening... Speak your transaction details.");
-        });
-    }
-
-    recognition.onresult = async (event) => {
-        const voiceText = event.results[0][0].transcript;
-        console.log("Voice Input:", voiceText);
-
-        // Show loading
-        voiceEntryBtn.textContent = "Processing...";
-        voiceEntryBtn.disabled = true;
-
-        const response = await fetch('/api/transactions/process-voice-entry/', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                ...authHeaders
-            },
-            body: JSON.stringify({ voice_text: voiceText })
-        });
-
-        voiceEntryBtn.textContent = "Voice Entry";
-        voiceEntryBtn.disabled = false;
-
-        const data = await response.json();
-
-        if (data.error) {
-            alert("Error processing voice input.");
-            return;
-        }
-
-        // Populate transaction details in modal
-        editAmount.value = data.amount;
-        editCategory.value = data.category;
-        editType.value = data.transaction_type;
-
-        transactionModal.classList.remove('hidden');
-    };
-
-    recognition.onerror = (event) => {
-        alert("Voice recognition error: " + event.error);
-    };
-}
-
-// Handle transaction save
-if (saveTransactionBtn) {
-    saveTransactionBtn.addEventListener('click', async () => {
-        const transactionData = {
-            amount: parseFloat(editAmount.value),
-            transaction_type: editType.value,
-            category: editCategory.value
-        };
-
-        const response = await fetch('/api/transactions/confirm-voice-transaction/', {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                ...authHeaders
-            },
-            body: JSON.stringify(transactionData)
-        });
-
-        const result = await response.json();
-
-        if (result.message) {
-            alert("Transaction saved successfully!");
-            transactionModal.classList.add('hidden');
-        } else {
-            alert("Error saving transaction.");
-        }
-    });
-}
-
-if (cancelTransactionBtn) {
-    cancelTransactionBtn.addEventListener('click', () => {
-        transactionModal.classList.add('hidden');
-    });
-}
 
 // Set Savings Progress Bar Width will be handled by fetchDashboardStats()
 
 // Load User Data handled by nav.js event listener
+
+// ==========================================
+// 3. ECHARTS & FINANCIAL HEALTH GAUGE
+// ==========================================
 
 // Initialize ECharts instances
 const incomeVsExpensesChart = echarts.init(document.getElementById('incomeVsExpensesChart'));
@@ -165,6 +75,10 @@ window.updateHealthGauge = function (score, label) {
         }]
     });
 };
+
+// ==========================================
+// 4. API DASHBOARD DATA FETCHING
+// ==========================================
 
 async function fetchDashboardStats() {
     try {
@@ -235,6 +149,10 @@ async function fetchInitialChartData() {
         console.error('Error fetching chart data:', error);
     }
 }
+
+// ==========================================
+// 5. CHART WIDGET RENDERING
+// ==========================================
 
 function updateCharts(data) {
     // Bar Chart (Income vs. Expenses for 6 months)

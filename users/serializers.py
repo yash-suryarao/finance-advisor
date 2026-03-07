@@ -4,6 +4,10 @@ from .models import Profile, FinancialData
 
 User = get_user_model()
 
+# ==========================================
+# 1. CORE AUTHENTICATION SERIALIZERS
+# ==========================================
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -51,8 +55,9 @@ class SignupSerializer(serializers.ModelSerializer):
         return user
 
 
-
-
+# ==========================================
+# 2. PROFILE & FINANCIAL DATA SERIALIZERS
+# ==========================================
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:

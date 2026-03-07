@@ -4,11 +4,13 @@ from django.utils.timezone import now
 
 User = get_user_model()
 
+# ==========================================
+# 1. NOTIFICATION SYSTEM MODEL
+# ==========================================
+
 class Notification(models.Model):
     RECIPIENT_CHOICES = [
         ('all', 'All Users'),
-        ('premium', 'Premium Users'),
-        ('free', 'Free Users'),
     ]
 
     recipients = models.CharField(max_length=10, choices=RECIPIENT_CHOICES,default="")

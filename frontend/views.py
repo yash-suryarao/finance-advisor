@@ -14,6 +14,10 @@ from django.db.models.functions import ExtractMonth
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+# ==========================================
+# 1. ADMIN / GLOBAL STATS
+# ==========================================
+
 @login_required
 def dashboard_stats(request):
     active_users = User.objects.filter(last_login__gte=datetime.now() - timedelta(days=30)).count()
@@ -49,6 +53,9 @@ def dashboard_stats(request):
 
     return render(request, 'homepage.html', context)
 
+# ==========================================
+# 2. DASHBOARD DATA APIs
+# ==========================================
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -255,6 +262,9 @@ def spending_analysis(request):
 
     return JsonResponse(context)
 
+# ==========================================
+# 3. PAGE RENDERING VIEWS
+# ==========================================
 
 def login_view(request):
     return render(request, 'frontend/login.html')

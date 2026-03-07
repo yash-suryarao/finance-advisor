@@ -18,6 +18,10 @@ from rest_framework import status
 from notifications.models import Notification
 from .serializers import BudgetInsightSerializer
 
+# ==========================================
+# 1. AI & FORECASTING INSIGHTS
+# ==========================================
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ai_insights(request):
@@ -120,7 +124,9 @@ class BudgetInsightView(generics.ListAPIView):
     def get_queryset(self):
         return BudgetInsight.objects.filter(user=self.request.user)
 
-
+# ==========================================
+# 2. SAVINGS TRENDS & PROJECTIONS
+# ==========================================
 
 # 1. AI-Powered Smart Recommendations
 @api_view(['GET'])
@@ -239,6 +245,10 @@ def get_monthly_savings_history(request):
 
     return Response(history_list)
 
+# ==========================================
+# 3. NOTIFICATIONS API
+# ==========================================
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_notifications(request):
@@ -253,7 +263,9 @@ def get_notifications(request):
 
     return Response(notifications_list)
 
-
+# ==========================================
+# 4. SAVINGS GOAL MANAGEMENT 
+# ==========================================
 
 # View for Savings Goal
 @api_view(['POST'])
@@ -367,6 +379,7 @@ def delete_savings_goal(request, goal_id):
         return Response({"error": "Goal not found."}, status=404)
 
 
+# --- Notifications API (Cont.) ---
 
 # Mark notifications as read
 @api_view(['POST'])

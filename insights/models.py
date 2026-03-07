@@ -2,6 +2,10 @@ from django.db import models
 from django.conf import settings
 from datetime import datetime
 
+# ==========================================
+# 1. AI FORECASTING MODELS
+# ==========================================
+
 class BudgetInsight(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     category = models.CharField(max_length=100, default="General")
@@ -13,8 +17,9 @@ class BudgetInsight(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.category} Insights"
 
-
-
+# ==========================================
+# 2. SAVINGS & GOALS MODELS
+# ==========================================
 
 class SavingsGoal(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

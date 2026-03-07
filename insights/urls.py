@@ -8,10 +8,17 @@ from .views import delete_savings_goal, update_goal_savings, withdraw_goal_savin
 
 
 urlpatterns = [
+    # ==========================================
+    # 1. AI & FORECASTING
+    # ==========================================
     path('ai-insights/', ai_insights, name='ai-insights'),
     path('category-detail/', category_insight_detail, name='category-insight-detail'),
     path('accept-suggested-budget/', accept_suggested_budget, name='accept-suggested-budget'),
     path('budget-insights/', BudgetInsightView.as_view(), name='budget-insights'),
+
+    # ==========================================
+    # 3. NOTIFICATIONS & 4. SAVINGS GOALS
+    # ==========================================
     path('notifications/', get_notifications, name='get_notifications'),
     path('mark-notifications-read/', mark_notifications_read, name='mark_notifications_read'),
     path('add-goal/', add_savings_goal, name='add_savings_goal'),

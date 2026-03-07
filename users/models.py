@@ -3,7 +3,9 @@ from django.db import models
 from django.conf import settings
 import uuid
 
-
+# ==========================================
+# 1. CORE USER MODEL
+# ==========================================
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -27,7 +29,9 @@ class User(AbstractUser):
 
 
 
-
+# ==========================================
+# 2. FINANCIAL PROFILE DATA
+# ==========================================
 
 class FinancialData(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -50,7 +54,9 @@ class FinancialData(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - Financial Data"
-
+# ==========================================
+# 3. USER SETUP PROFILE
+# ==========================================
 
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -79,10 +85,6 @@ class Profile(models.Model):
         ('Medium', 'Medium'),
         ('High', 'High')
     ])
-    # subscription_plan = models.CharField(max_length=10, choices=[
-    #     ('Free', 'Free'),
-    #     ('Premium', 'Premium')
-    # ])
 
     def __str__(self):
         return f"{self.user.username} - {self.financial_goal}"

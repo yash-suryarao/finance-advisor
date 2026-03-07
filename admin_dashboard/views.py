@@ -21,6 +21,9 @@ from django.db.models.functions import TruncMonth
 from django.db.models import Sum, Case, When, DecimalField
 from django.utils.timezone import now
 
+# ==========================================
+# 1. DASHBOARD & OVERVIEW
+# ==========================================
 
 @login_required
 def admin_dashboard(request):
@@ -88,7 +91,9 @@ def admin_dashboard(request):
 
     return render(request, 'admin_dashboard/index.html', context)
 
-
+# ==========================================
+# 2. USER MANAGEMENT
+# ==========================================
 
 @login_required
 def user_management(request):
@@ -192,6 +197,10 @@ def bulk_delete_users(request):
         except Exception as e:
             return JsonResponse({"success": False, "error": str(e)})
     return JsonResponse({"success": False, "error": "Invalid request"})
+
+# ==========================================
+# 3. TRANSACTIONS & PAYMENTS
+# ==========================================
 
 @login_required
 def transaction_management(request):
@@ -356,6 +365,10 @@ def export_payments(request):
     return response
 
 
+# ==========================================
+# 4. NOTIFICATIONS MANAGEMENT
+# ==========================================
+
 @login_required
 def notification_management(request):
     if request.method == "POST":
@@ -401,6 +414,10 @@ def notification_management(request):
     print(notifications)  # Debugging statement
     return render(request, 'admin_dashboard/notification_management.html', {'users': users, 'notifications': notifications})
 
+# ==========================================
+# 5. ADMIN SETTINGS
+# ==========================================
+
 @login_required
 def settings_view(request):
     settings = AdminSettings.objects.first()
@@ -438,8 +455,9 @@ def settings_view(request):
 
     return render(request, "admin_dashboard/settings.html", {"settings": settings})
 
-
-
+# ==========================================
+# 6. ADMIN AUTHENTICATION
+# ==========================================
 
 def user_login(request):
     if request.method == "POST":

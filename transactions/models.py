@@ -1,13 +1,17 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.conf import settings
-import uuid
 from datetime import datetime
+import uuid
 
 User = get_user_model()
 
+# ==========================================
+# 1. CATEGORY & TRANSACTIONS MODULE
+# ==========================================
 
 class Category(models.Model):
+    """User-defined transaction categories (e.g., Food, Transport, Salary)."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
 
@@ -18,6 +22,7 @@ class Category(models.Model):
         return f"{self.user.username} - {self.name}"
 
 class Transaction(models.Model):
+    """Individual financial transactions recorded by the user."""
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
@@ -30,27 +35,33 @@ class Transaction(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.amount} ({self.category})"
 
-
-
-
-class alerts(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,related_name='transaction_alerts')
-    message = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_read = models.BooleanField(default=False)
+class DeletedTransaction(models.Model):
+    """Log of deleted transactions for auditing or recovery purposes."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    category_name = models.CharField(max_length=100, null=True, blank=True)
+    category_type = models.CharField(max_length=50)
+    description = models.TextField(blank=True, null=True)
+    date = models.DateField()
+    deleted_at = models.DateTimeField(default=datetime.now)
 
     def __str__(self):
-        return f"{self.user.username} - {self.message}"
+        return f"Deleted: {self.user.username} - {self.amount} ({self.category_name})"
 
 
+# ==========================================
+# 2. BUDGETING MODULE
+# ==========================================
 
 class Budget(models.Model):
+    """User-defined monthly spending limits per category."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.CharField(max_length=255)
     monthly_limit = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
 
 class BudgetHistory(models.Model):
+    """Historical tracking of budget performance month-over-month."""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     category = models.CharField(max_length=255)
     month = models.IntegerField()  # Stores the month (1-12)
@@ -62,14 +73,17 @@ class BudgetHistory(models.Model):
     class Meta:
         unique_together = ('user', 'category', 'month', 'year')  # Prevents duplicate records
 
-class DeletedTransaction(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    category_name = models.CharField(max_length=100, null=True, blank=True)
-    category_type = models.CharField(max_length=50)
-    description = models.TextField(blank=True, null=True)
-    date = models.DateField()
-    deleted_at = models.DateTimeField(default=datetime.now)
+
+# ==========================================
+# 3. ALERTS & NOTIFICATIONS MODULE
+# ==========================================
+
+class alerts(models.Model):
+    """User notifications (e.g., nearing budget limit, large expense warning)."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transaction_alerts')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Deleted: {self.user.username} - {self.amount} ({self.category_name})"
+        return f"{self.user.username} - {self.message}"

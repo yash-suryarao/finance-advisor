@@ -6,7 +6,6 @@ from django.http import JsonResponse, HttpResponse
 from django.db.models import Sum
 from datetime import timedelta
 from .models import Transaction, Budget, BudgetHistory, Category
-from .nlp_processing import process_voice_transaction
 from rest_framework import generics, filters, serializers
 from rest_framework.pagination import PageNumberPagination
 import csv
@@ -24,6 +23,9 @@ import io
 
 from .models import DeletedTransaction
 
+# ==========================================
+# 1. CORE TRANSACTIONS MODULE
+# ==========================================
 
 # View for fetching latest 10 transactions
 @api_view(['GET'])
@@ -117,6 +119,10 @@ class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
 
+# ==========================================
+# 2. CATEGORIES MODULE
+# ==========================================
+
 # View for fetching all categories
 class CategoryListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -144,6 +150,9 @@ class CategoryListView(generics.ListAPIView):
         return Category.objects.filter(user=user).order_by('name')
 
 
+# ==========================================
+# 3. BUDGETING MODULE
+# ==========================================
 
 # View for fetching and creating budgets
 class BudgetView(generics.ListCreateAPIView):
@@ -165,6 +174,10 @@ class BudgetHistoryView(generics.ListAPIView):
             year=self.request.query_params.get('year')
         )
 
+
+# ==========================================
+# 4. AI & AUTOMATIONS MODULE - CATEGORIZATION
+# ==========================================
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

@@ -16,19 +16,18 @@ class TransactionIntegrationTests(TestCase):
         
     def test_create_transaction_api(self):
         payload = {
-            'amount': 150.50,
+            'amount': '150.50',
             'description': 'Lunch at cafe',
-            'category': 'Food',
-            'transaction_type': 'expense',
-            'currency': 'USD'
+            'category_type': 'expense',
+            'date': '2023-10-01'
         }
         res = self.client.post(
-            reverse('confirm_voice_transaction'), 
+            reverse('transaction_list_create'), 
             data=payload, 
             content_type='application/json',
             **self.auth_headers
         )
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 201)
         self.assertTrue(Transaction.objects.filter(user=self.user, amount=150.50).exists())
 
     def test_auto_categorization(self):

@@ -1,4 +1,8 @@
 
+// ==========================================
+// 1. GLOBAL STATE & INITIALIZATION
+// ==========================================
+
 const authHeaders = {
     "Authorization": `Bearer ${localStorage.getItem('access_token')}`
 };
@@ -8,13 +12,13 @@ let currentPeriod = 'month';
 let sortKey = null; // null = use backend default stack order (-date, -created_at)
 let sortAsc = false;
 let activeCategoryFilter = null;
+let allCategoriesList = [];
 
-// ── Boot ──────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     fetchAllData();
     fetchCategories();
-    document.getElementById("addTransactionBtn").addEventListener("click", () =>
-        document.getElementById("addTransactionModal").classList.remove("hidden"));
+    const addBtn = document.getElementById("addTransactionBtn");
+    if (addBtn) addBtn.addEventListener("click", () => document.getElementById("addTransactionModal").classList.remove("hidden"));
     document.getElementById("closeModal").addEventListener("click", closeAddModal);
     document.getElementById("cancelBtn").addEventListener("click", closeAddModal);
     document.getElementById("transactionForm").addEventListener("submit", submitTransaction);
@@ -35,7 +39,10 @@ function setPeriod(p) {
     updateAll();
 }
 
-// ── Fetch ALL transactions (follows DRF pagination) ──
+// ==========================================
+// 2. API DATA FETCHING
+// ==========================================
+
 async function fetchAllData() {
     try {
         let url = "/api/transactions/?page_size=100";
@@ -62,7 +69,27 @@ async function fetchAllData() {
     }
 }
 
-// ── Date filtering by period ──────────────────────
+async function fetchCategories() {
+    try {
+        const res = await fetch("/api/transactions/categories/", { headers: authHeaders });
+        const categories = await res.json();
+        allCategoriesList = categories;
+        const modalSel = document.getElementById("transactionCategory");
+        const filterSel = document.getElementById("filterCategory");
+        if (modalSel && filterSel) {
+            const opts = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            modalSel.innerHTML = opts;
+            filterSel.innerHTML = '<option value="">All Categories</option>' + opts;
+        }
+    } catch (e) {
+        console.error("Error fetching categories:", e);
+    }
+}
+
+// ==========================================
+// 3. UI RENDERING & CHARTS
+// ==========================================
+
 function filterByPeriod(transactions, period) {
     const now = new Date();
     return transactions.filter(t => {
@@ -363,25 +390,9 @@ function renderTransactions(transactions) {
     `).join('');
 }
 
-let allCategoriesList = [];
-
-// ── Fetch categories for filter + modal ──────────
-async function fetchCategories() {
-    try {
-        const res = await fetch("/api/transactions/categories/", { headers: authHeaders });
-        const categories = await res.json();
-        allCategoriesList = categories;
-        const modalSel = document.getElementById("transactionCategory");
-        const filterSel = document.getElementById("filterCategory");
-        const opts = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-        modalSel.innerHTML = opts;
-        filterSel.innerHTML = '<option value="">All Categories</option>' + opts;
-    } catch (e) {
-        console.error("Error fetching categories:", e);
-    }
-}
-
-// ── Add Transaction ───────────────────────────────
+// ==========================================
+// 4. USER ACTIONS (CRUD & FILTERS)
+// ==========================================
 
 // Debounced auto-categorizer
 let categorizeTimeout = null;
@@ -491,50 +502,3 @@ function exportCsv() {
     a.download = `transactions_${currentPeriod}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
 }
-
-// ── Voice entry (kept from original) ─────────────
-const voiceEntryBtn = document.getElementById('voiceEntryBtn');
-const transactionModal = document.getElementById('transactionModal');
-const editAmount = document.getElementById('editAmount');
-const editCategory = document.getElementById('editCategory');
-const editType = document.getElementById('editType');
-const saveTransactionBtn = document.getElementById('saveTransaction');
-const cancelTransactionBtn = document.getElementById('cancelTransaction');
-
-if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SR();
-    recognition.continuous = false; recognition.lang = 'en-US'; recognition.interimResults = false;
-
-    if (voiceEntryBtn) {
-        voiceEntryBtn.addEventListener('click', () => { recognition.start(); alert("Listening..."); });
-    }
-    recognition.onresult = async (event) => {
-        const voiceText = event.results[0][0].transcript;
-        if (voiceEntryBtn) { voiceEntryBtn.textContent = "Processing..."; voiceEntryBtn.disabled = true; }
-        const res = await fetch('/api/transactions/process-voice-entry/', {
-            method: 'POST', headers: { "Content-Type": "application/json", ...authHeaders },
-            body: JSON.stringify({ voice_text: voiceText })
-        });
-        if (voiceEntryBtn) { voiceEntryBtn.textContent = "Voice Entry"; voiceEntryBtn.disabled = false; }
-        const data = await res.json();
-        if (!data.error) {
-            editAmount.value = data.amount; editCategory.value = data.category; editType.value = data.transaction_type;
-            if (transactionModal) transactionModal.classList.remove('hidden');
-        }
-    };
-    recognition.onerror = (e) => alert("Voice error: " + e.error);
-}
-
-if (saveTransactionBtn) {
-    saveTransactionBtn.addEventListener('click', async () => {
-        const res = await fetch('/api/transactions/confirm-voice-transaction/', {
-            method: 'POST', headers: { "Content-Type": "application/json", ...authHeaders },
-            body: JSON.stringify({ amount: parseFloat(editAmount.value), transaction_type: editType.value, category: editCategory.value })
-        });
-        const result = await res.json();
-        if (result.message) { if (transactionModal) transactionModal.classList.add('hidden'); fetchAllData(); }
-        else alert("Error saving.");
-    });
-}
-if (cancelTransactionBtn) cancelTransactionBtn.addEventListener('click', () => transactionModal?.classList.add('hidden'));

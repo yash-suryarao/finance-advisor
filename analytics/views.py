@@ -14,6 +14,10 @@ from payments.models import Subscription
 User = get_user_model()
 permission_classes = [IsAdminUser]
 
+# ==========================================
+# 1. ADMIN USER STATISTICS
+# ==========================================
+
 @api_view(['GET'])
 def user_statistics(request):
     total_users = User.objects.count()
@@ -23,6 +27,10 @@ def user_statistics(request):
     }
     serializer = UserCountSerializer(data)
     return Response(serializer.data)
+
+# ==========================================
+# 2. ADMIN REVENUE STATISTICS
+# ==========================================
 
 @api_view(['GET'])
 def revenue_statistics(request):
@@ -38,6 +46,10 @@ def revenue_statistics(request):
     }
     serializer = RevenueSerializer(data)
     return Response(serializer.data)
+
+# ==========================================
+# 3. ADMIN ACTIVITY LOGS
+# ==========================================
 
 @api_view(['GET'])
 def activity_logs(request):
