@@ -128,8 +128,8 @@ async function fetchDashboardStats() {
         document.getElementById('savingsRateLabel').textContent = `${data.savings_rate}%`;
         document.getElementById('savingsRateBar').style.width = `${Math.min(data.savings_rate, 100)}%`;
 
-        document.getElementById('debtRatioLabel').textContent = `${data.debt_ratio}%`;
-        document.getElementById('debtRatioBar').style.width = `${Math.min(data.debt_ratio, 100)}%`;
+        document.getElementById('spendingRatioLabel').textContent = `${data.spending_ratio}%`;
+        document.getElementById('spendingRatioBar').style.width = `${Math.min(data.spending_ratio, 100)}%`;
 
         // Update the health gauge globally if initialized
         if (window.updateHealthGauge) {

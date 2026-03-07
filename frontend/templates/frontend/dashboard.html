@@ -126,21 +126,21 @@
                             </div>
                         </div>
 
-                        <!-- Debt Ratio -->
+                        <!-- Spending Ratio -->
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <div class="flex items-center space-x-2">
-                                    <div class="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center">
-                                        <i class="ri-arrow-down-line text-red-500 text-sm"></i>
+                                    <div class="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center">
+                                        <i class="ri-pie-chart-line text-orange-500 text-sm"></i>
                                     </div>
-                                    <span class="text-sm font-semibold text-gray-700">Debt Ratio</span>
+                                    <span class="text-sm font-semibold text-gray-700">Spending Ratio</span>
                                 </div>
-                                <span id="debtRatioLabel"
+                                <span id="spendingRatioLabel"
                                     class="text-sm font-bold text-gray-900 tracking-tight">0%</span>
                             </div>
                             <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                                <div id="debtRatioBar"
-                                    class="bg-red-500 h-full rounded-full transition-all duration-1000 ease-out"
+                                <div id="spendingRatioBar"
+                                    class="bg-orange-500 h-full rounded-full transition-all duration-1000 ease-out"
                                     style="width: 0%"></div>
                             </div>
                         </div>
@@ -371,7 +371,7 @@
             </div>
         </div>
     </div>
-    <script src="{% static 'frontend/js/main.js' %}?v=3.8"></script>
+    <script src="{% static 'frontend/js/main.js' %}?v=3.9"></script>
     <!-- Include Global Nav JS -->
     <script src="{% static 'frontend/js/nav.js' %}?v=1.1"></script>
 </body>

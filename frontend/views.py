@@ -112,43 +112,29 @@ def financial_summary(request):
     savings_change = calc_progress(savings, last_month_savings)
     savings_rate = round((savings / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
 
-    # Debt Ratio (Debt-to-Income / DTI)
-    from users.models import FinancialData
-    from django.db.models import Q
-    
-    financial_data = FinancialData.objects.filter(user=user).first()
-    
-    # 1. Base monthly loan/debt payments from user's financial profile
-    monthly_loans = float(financial_data.loans) if financial_data else 0
-    
-    # 2. Add actual transaction debt payments from the current month
-    actual_debt_payments = last_month_qs.filter(
-        Q(category__name__icontains='loan') | 
-        Q(category__name__icontains='emi') | 
-        Q(category__name__icontains='mortgage') |
-        Q(category__name__icontains='credit') |
-        Q(description__icontains='loan') |
-        Q(description__icontains='emi')
-    ).aggregate(Sum('amount'))['amount__sum'] or 0
-
-    total_monthly_debt = monthly_loans + float(actual_debt_payments)
-    
-    # Calculate DTI Ratio percentage
-    debt_ratio = round((total_monthly_debt / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
+    # Spending Ratio (Income Utilization)
+    spending_ratio = round((monthly_expenses / monthly_income) * 100, 2) if monthly_income > 0 else 0.00
 
     # Financial Health Score
-    if total_transactions_count == 0:
+    if total_transactions_count == 0 or monthly_income == 0:
         financial_health_score = 0
-        financial_health = ''
+        financial_health = 'No Data'
     else:
-        if savings_rate > 20 and debt_ratio < 30:
-            financial_health_score = 100
+        # Savings Rate: Ideal is 20% or more for up to 50 points.
+        savings_score = min(50, max(0, (savings_rate / 20) * 50))
+        
+        # Spending Ratio: Ideal is 80% or less for up to 50 points (inverse of savings).
+        spending_score = min(50, max(0, ((100 - spending_ratio) / 20) * 50))
+        
+        financial_health_score = int(max(0, min(100, savings_score + spending_score)))
+        
+        if financial_health_score >= 80:
             financial_health = 'Excellent'
-        elif savings_rate > 10 and debt_ratio < 40:
-            financial_health_score = 70
+        elif financial_health_score >= 60:
             financial_health = 'Good'
+        elif financial_health_score >= 40:
+            financial_health = 'Fair'
         else:
-            financial_health_score = 30
             financial_health = 'Poor'
 
     total_goal = 1
@@ -165,7 +151,7 @@ def financial_summary(request):
         'savings': savings,
         'savings_change': savings_change,
         'savings_rate': savings_rate,
-        'debt_ratio': debt_ratio,
+        'spending_ratio': spending_ratio,
         'financial_health': financial_health,
         'financial_health_score': financial_health_score,
         'savings_progress': savings_progress,

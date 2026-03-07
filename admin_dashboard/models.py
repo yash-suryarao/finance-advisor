@@ -9,7 +9,7 @@ class AdminSettings(models.Model):
 
     # Admin Profile Settings
     admin_name = models.CharField(max_length=255, default="Admin")
-    admin_email = models.EmailField(unique=True, default="admin@example.com")
+    admin_email = models.EmailField(unique=True, default="admin1@gmail.com")
     admin_phone = models.CharField(max_length=15, blank=True, null=True)
     admin_avatar = models.ImageField(upload_to="admin_avatars/", blank=True, null=True)
 
