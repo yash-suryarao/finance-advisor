@@ -5,7 +5,7 @@ from .views import accept_suggested_budget,BudgetInsightView
 from .views import get_notifications, mark_notifications_read
 from .views import add_savings_goal, get_savings_progress
 from .views import delete_savings_goal, update_goal_savings, withdraw_goal_savings
-
+from . import views
 
 urlpatterns = [
     # ==========================================
@@ -15,6 +15,9 @@ urlpatterns = [
     path('category-detail/', category_insight_detail, name='category-insight-detail'),
     path('accept-suggested-budget/', accept_suggested_budget, name='accept-suggested-budget'),
     path('budget-insights/', BudgetInsightView.as_view(), name='budget-insights'),
+    path('monthly-review/', views.monthly_xai_review, name='monthly-review'),
+    path('subscriptions/', views.get_subscriptions, name='get-subscriptions'),
+    path('anomaly-heatmap/', views.get_anomaly_heatmap, name='anomaly-heatmap'),
 
     # ==========================================
     # 3. NOTIFICATIONS & 4. SAVINGS GOALS

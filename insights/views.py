@@ -17,6 +17,7 @@ from rest_framework import status
 
 from notifications.models import Notification
 from .serializers import BudgetInsightSerializer
+import pandas as pd
 
 # ==========================================
 # 1. AI & FORECASTING INSIGHTS
@@ -42,6 +43,108 @@ def ai_insights(request):
         })
 
     return Response(insights)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def monthly_xai_review(request):
+    """
+    Generates a full Explainable AI Summary covering the entire month.
+    """
+    from insights.utils import get_user_transactions_df, generate_monthly_xai_report
+    user = request.user
+    df = get_user_transactions_df(user)
+    
+    if df.empty:
+        return Response({"error": "No transaction data available for analysis."}, status=400)
+        
+    current_month_str = df['date'].dt.to_period('M').max()
+    prev_month_str = current_month_str - 1
+
+    # Extract Income and Spending
+    curr_inc = df[(df['date'].dt.to_period('M') == current_month_str) & (df['type'] == 'Income')]['amount'].sum()
+    curr_exp = df[(df['date'].dt.to_period('M') == current_month_str) & (df['type'] == 'Expense')]['amount'].sum()
+    
+    prev_inc = df[(df['date'].dt.to_period('M') == prev_month_str) & (df['type'] == 'Income')]['amount'].sum()
+    prev_exp = df[(df['date'].dt.to_period('M') == prev_month_str) & (df['type'] == 'Expense')]['amount'].sum()
+    
+    # Financial Health Calculation (Mirrors frontend logic)
+    savings_rate = round(((curr_inc - curr_exp) / curr_inc) * 100, 2) if curr_inc > 0 else 0
+    spending_ratio = round((curr_exp / curr_inc) * 100, 2) if curr_inc > 0 else 0
+    savings_score = min(50, max(0, (savings_rate / 20) * 50))
+    spending_score = min(50, max(0, ((100 - spending_ratio) / 20) * 50))
+    health_score = int(max(0, min(100, savings_score + spending_score)))
+    
+    # Top 3 Categories
+    top_cats = df[(df['date'].dt.to_period('M') == current_month_str) & (df['type'] == 'Expense')].groupby('category')['amount'].sum().nlargest(3).index.tolist()
+
+    user_data_summary = {
+        'current_month_income': float(curr_inc),
+        'current_month_spending': float(curr_exp),
+        'previous_month_income': float(prev_inc),
+        'previous_month_spending': float(prev_exp),
+        'health_score': health_score,
+        'top_categories': top_cats
+    }
+
+    ai_report = generate_monthly_xai_report(user_data_summary)
+    return Response(ai_report, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_subscriptions(request):
+    """
+    Extracts recurring subscriptions using Gemini across 90 days.
+    """
+    from insights.utils import extract_subscriptions
+    subs = extract_subscriptions(request.user)
+    return Response(subs, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_anomaly_heatmap(request):
+    """
+    Returns daily spending with anomaly markers.
+    """
+    from insights.utils import get_user_transactions_df, detect_anomalies
+    user = request.user
+    df = get_user_transactions_df(user)
+    
+    if df.empty:
+        return Response([])
+        
+    # Get last 60 days
+    sixty_days_ago = pd.Timestamp.now() - pd.Timedelta(days=60)
+    df = df[df['date'] >= sixty_days_ago]
+    
+    if df.empty:
+        return Response([])
+        
+    # Get daily aggregates
+    daily_spend = df[df['type'] == 'Expense'].groupby(df['date'].dt.strftime('%Y-%m-%d'))['amount'].sum().to_dict()
+    
+    # Run the isolation forest
+    anomalies = detect_anomalies(user)
+    anomaly_dates = [a['title'] for a in anomalies] # Extracted purely for marker
+    
+    # We rebuild this for the heatmap UI format [date, amount, is_anomaly]
+    heatmap_data = []
+    
+    # Rerun isolation logic locally to get specific dates since the util only returns text currently
+    # Just simple stddev here for speed to ensure UI works seamlessly
+    amounts = pd.Series(list(daily_spend.values()))
+    if not amounts.empty and len(amounts) > 5:
+        mean = amounts.mean()
+        std = amounts.std()
+        threshold = mean + (2 * std)
+        
+        for date_str, amt in daily_spend.items():
+            is_anomaly = amt > threshold
+            heatmap_data.append([date_str, float(amt), is_anomaly])
+            
+    return Response(heatmap_data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

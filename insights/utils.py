@@ -245,6 +245,134 @@ def generate_rule_based_insight(category_data):
     return "\n".join(lines)
 
 
+def generate_monthly_xai_report(user_data_summary):
+    """
+    Calls Gemini to generate the Explainable AI (XAI) Monthly Report.
+    Returns a structured dict with what_happened, why_it_matters, and actionable recommendations.
+    """
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    if not api_key or not genai:
+        return {
+            "what_happened": "AI service is currently unavailable. You spent ₹" + str(user_data_summary.get('current_month_spending', 0)) + " this month.",
+            "why_it_matters": "Tracking your expenses helps you maintain a healthy Spending Ratio.",
+            "recommendations": []
+        }
+
+    genai.configure(api_key=api_key)
+    prompt = f"""
+    You are an expert financial advisor AI. The user has requested a monthly review. Here is their data:
+    
+    Current Month Income: ₹{user_data_summary.get('current_month_income', 0)}
+    Current Month Expense: ₹{user_data_summary.get('current_month_spending', 0)}
+    Previous Month Income: ₹{user_data_summary.get('previous_month_income', 0)}
+    Previous Month Expense: ₹{user_data_summary.get('previous_month_spending', 0)}
+    Financial Health Score (0-100): {user_data_summary.get('health_score', 0)}
+    Top 3 Expense Categories: {user_data_summary.get('top_categories', [])}
+    
+    Instructions:
+    Return your response strictly as a JSON object with the following schema:
+    {{
+      "what_happened": "A friendly 2-3 sentence summary of how they did this month compared to last month, highlighting the top spending category.",
+      "why_it_matters": "A 2-3 sentence explanation of how their spending impacted their Financial Health score.",
+      "recommendations": [
+        {{
+          "type": "budget" or "goal",
+          "category": "The exact category name (e.g., 'Food') or name of the goal",
+          "amount": integer amount suggested,
+          "reason": "Why this action will help them recover or improve."
+        }}
+      ]
+    }}
+    Provide exactly 2 highly relevant recommendations. Ensure the JSON is valid. Do not wrap in markdown tags like ```json.
+    """
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.2))
+        
+        # Clean string just in case gemini still wraps it in markdown block
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+            
+        return json.loads(raw_text)
+    except Exception as e:
+        logger.error(f"XAI Monthly Report generation failed: {e}")
+        return {
+            "what_happened": "We experienced an error generating your full AI report.",
+            "why_it_matters": "Detailed analysis is currently unavailable.",
+            "recommendations": []
+        }
+
+
+def extract_subscriptions(user):
+    """
+    Calls Gemini to analyze the last 90 days of transactions and figure out subscriptions.
+    """
+    df = get_user_transactions_df(user)
+    if df.empty:
+        return []
+
+    # Get last 90 days
+    ninety_days_ago = pd.Timestamp.now() - pd.Timedelta(days=90)
+    recent_txs = df[df['date'] >= ninety_days_ago]
+    
+    if recent_txs.empty:
+        return []
+
+    # Extract relevant fields to save token space
+    tx_list = recent_txs[['date', 'description', 'amount', 'category']].to_dict(orient='records')
+    # Filter out empty descriptions
+    tx_list = [tx for tx in tx_list if type(tx['description']) == str and str(tx['description']).strip()]
+    
+    if len(tx_list) < 3: # Not enough data
+        return []
+        
+    # sample to avoid massive token load
+    if len(tx_list) > 100:
+        tx_list = random.sample(tx_list, 100)
+        
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    if not api_key or not genai:
+        return []
+
+    genai.configure(api_key=api_key)
+    prompt = f"""
+    Analyze these recent bank transactions and identify likely "Subscriptions" or "Recurring Charges" (e.g. Netflix, Gym, Rent, ongoing software).
+    
+    Transactions Data:
+    {json.dumps(tx_list, default=str)}
+    
+    Instructions:
+    Return a strict JSON array of objects representing identified recurring charges. If none are found, return empty array [].
+    Schema:
+    [
+      {{
+        "service_name": "Name of service (e.g. Netflix)",
+        "estimated_monthly_cost": integer amount
+      }}
+    ]
+    Do not wrap the JSON in markdown formatting perfectly valid JSON array.
+    """
+    try:
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.1))
+        
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        elif raw_text.startswith("```"):
+            raw_text = raw_text[3:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+            
+        return json.loads(raw_text)
+    except Exception as e:
+        logger.error(f"Subscription extraction failed: {e}")
+        return []
+
+
 def generate_category_llm_insight(category_data):
     """
     Attempts to generate a Gemini AI insight. Falls back to rule-based summary
