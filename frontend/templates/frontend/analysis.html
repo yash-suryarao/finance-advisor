@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -107,10 +108,13 @@
     <script>
         async function fetchAnalysisData() {
             try {
+                const token = localStorage.getItem('access_token');
+                const headers = { 'Authorization': `Bearer ${token}` };
+
                 // Fetch mock or actual data for the charts
                 // Reusing budget and transaction endpoints to populate graphs effectively
-                const budgetRes = await fetch('/api/insights/budget-insights/');
-                const budgetData = await fetch('/api/transactions/budget/');
+                const budgetRes = await fetch('/api/insights/budget-insights/', { headers });
+                const budgetData = await fetch('/api/transactions/budget/', { headers });
 
                 // Initialize Echarts
                 const trendsChart = echarts.init(document.getElementById('trendsChart'));

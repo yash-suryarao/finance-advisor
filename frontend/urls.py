@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    dashboard_stats, financial_summary, spending_analysis, login_view, signup_view
+    dashboard_stats, financial_summary, spending_analysis, login_view, signup_view, analysis_page
 )
 
 urlpatterns = [
@@ -9,6 +9,7 @@ urlpatterns = [
     # ==========================================
     path('login/', login_view, name='login'),
     path('signup/', signup_view, name='signup'),
+    path('analysis/', analysis_page, name='analysis_page'),
 
     # ==========================================
     # 2. DATA APIs

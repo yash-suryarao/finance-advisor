@@ -267,6 +267,7 @@ def transactions_page(request):
     return render(request, 'frontend/transaction.html')
 
 
+@login_required
 def analysis_page(request):
     return render(request, 'frontend/analysis.html')
 
