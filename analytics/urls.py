@@ -1,3 +1,9 @@
+"""
+ANALYTICS MODULE - URLS (analytics/urls.py)
+-------------------------------------------
+URL routing for administrative metrics endpoints.
+"""
+
 from django.urls import path
 from .views import user_statistics, revenue_statistics, activity_logs
 

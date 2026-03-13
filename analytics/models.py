@@ -1,3 +1,9 @@
+"""
+ANALYTICS MODULE - MODELS (analytics/models.py)
+-----------------------------------------------
+Defines the database schema for platform-level activity tracking.
+"""
+
 from django.db import models
 from django.contrib.auth import get_user_model
 User = get_user_model()

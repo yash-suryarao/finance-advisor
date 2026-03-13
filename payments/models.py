@@ -1,4 +1,8 @@
-# payments/models.py
+"""
+PAYMENTS MODULE - MODELS (payments/models.py)
+---------------------------------------------
+Defines the database schema for tracking user subscription payments or invoices.
+"""
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model

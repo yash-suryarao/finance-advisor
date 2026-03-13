@@ -1,3 +1,10 @@
+"""
+ANALYTICS MODULE - VIEWS (analytics/views.py)
+---------------------------------------------
+This file contains the administrative API endpoints for platform-wide metrics.
+It allows admins to fetch total user counts, global revenues, and recent activity logs.
+"""
+
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
@@ -16,6 +23,7 @@ permission_classes = [IsAdminUser]
 
 # ==========================================
 # 1. ADMIN USER STATISTICS
+# Endpoints to fetch active/total user counts for the admin dashboard.
 # ==========================================
 
 @api_view(['GET'])
@@ -30,6 +38,7 @@ def user_statistics(request):
 
 # ==========================================
 # 2. ADMIN REVENUE STATISTICS
+# Endpoints to compute platform-wide total and monthly revenues.
 # ==========================================
 
 @api_view(['GET'])
@@ -49,6 +58,7 @@ def revenue_statistics(request):
 
 # ==========================================
 # 3. ADMIN ACTIVITY LOGS
+# Endpoints to fetch a stream of recent user activities across the platform.
 # ==========================================
 
 @api_view(['GET'])

@@ -1,0 +1,226 @@
+Transaction,Category
+McDonalds,Food & Dining
+Burger King,Food & Dining
+Subway,Food & Dining
+Taco Bell,Food & Dining
+Pizza Hut,Food & Dining
+Domino's,Food & Dining
+KFC,Food & Dining
+Wendy's,Food & Dining
+Chick-fil-A,Food & Dining
+Starbucks,Food & Dining
+Dunkin,Food & Dining
+Grocery,Food & Dining
+Whole Foods,Food & Dining
+Trader Joe's,Food & Dining
+Aldi,Food & Dining
+Kroger,Food & Dining
+Safeway,Food & Dining
+Publix,Food & Dining
+Costco Groceries,Food & Dining
+Restaurant,Food & Dining
+Cafe,Food & Dining
+Coffee Shop,Food & Dining
+Bake Shop,Food & Dining
+Uber Eats,Food & Dining
+DoorDash,Food & Dining
+Grubhub,Food & Dining
+Postmates,Food & Dining
+Uber,Transport
+Lyft,Transport
+Uber Trip,Transport
+Lyft Ride,Transport
+Taxi,Transport
+Cab,Transport
+Bus,Transport
+Train,Transport
+Subway Ticket,Transport
+Metro,Transport
+Amtrak,Transport
+Public Transit,Transport
+Shell,Transport
+Chevron,Transport
+Exxon,Transport
+BP,Transport
+Mobil,Transport
+Gas,Transport
+Fuel,Transport
+Parking,Transport
+Toll,Transport
+Car Wash,Transport
+Auto Insurance,Transport
+Car Insurance,Transport
+Geico,Transport
+State Farm,Transport
+Progressive,Transport
+Tesla,Transport
+Car Repair,Transport
+Mechanic,Transport
+Walmart,Shopping
+Target,Shopping
+Amazon,Shopping
+Amazon.com,Shopping
+Prime Video,Subscriptions
+Amazon Prime,Subscriptions
+Macy's,Shopping
+Nordstrom,Shopping
+H&M,Shopping
+Zara,Shopping
+Forever 21,Shopping
+Nike,Shopping
+Adidas,Shopping
+Electronics,Shopping
+Best Buy,Shopping
+Apple Store,Shopping
+Micro Center,Shopping
+Hardware,Shopping
+Software,Shopping
+Home Depot,Shopping
+Lowe's,Shopping
+IKEA,Shopping
+Clothing,Shopping
+Shoes,Shopping
+Boutique,Shopping
+Electric Bill,Bills & Utilities
+Water Bill,Bills & Utilities
+Gas Bill,Bills & Utilities
+Trash,Bills & Utilities
+Internet,Bills & Utilities
+Comcast,Bills & Utilities
+Xfinity,Bills & Utilities
+AT&T,Bills & Utilities
+Verizon,Bills & Utilities
+T-Mobile,Bills & Utilities
+Sprint,Bills & Utilities
+Phone Bill,Bills & Utilities
+Utilities,Bills & Utilities
+Sewer,Bills & Utilities
+Netflix,Subscriptions
+Spotify,Subscriptions
+Hulu,Subscriptions
+HBO Max,Subscriptions
+Disney+,Subscriptions
+Apple Music,Subscriptions
+Youtube Premium,Subscriptions
+Gym Membership,Subscriptions
+iCloud,Subscriptions
+Creative Cloud,Subscriptions
+Patreon,Subscriptions
+AMC Theatres,Entertainment
+Regal Cinemas,Entertainment
+Cinemark,Entertainment
+Movie,Entertainment
+Steam,Entertainment
+PlayStation,Entertainment
+Xbox,Entertainment
+Nintendo,Entertainment
+Game,Entertainment
+Concert,Entertainment
+Live Ticket,Entertainment
+Theme Park,Entertainment
+Bowling,Entertainment
+Pharmacy,Health & Medical
+CVS,Health & Medical
+Walgreens,Health & Medical
+Rite Aid,Health & Medical
+Doctor,Health & Medical
+Hospital,Health & Medical
+Dentist,Health & Medical
+Vision,Health & Medical
+Therapy,Health & Medical
+Medical Bill,Health & Medical
+Health Insurance,Health & Medical
+Aetna,Health & Medical
+Blue Cross,Health & Medical
+Tuition,Education
+Student Loan,Education
+Bookstore,Education
+Course,Education
+Udemy,Education
+Coursera,Education
+School Supplies,Education
+College,Education
+University,Education
+Rent,Rent & Housing
+Mortgage,Rent & Housing
+HOA,Rent & Housing
+Property Tax,Rent & Housing
+Home Maintenance,Rent & Housing
+Plumber,Rent & Housing
+Electrician,Rent & Housing
+Apartment,Rent & Housing
+Haircut,Personal Care
+Salon,Personal Care
+Barber,Personal Care
+Spa,Personal Care
+Massage,Personal Care
+Cosmetics,Personal Care
+Sephora,Personal Care
+Ulta,Personal Care
+Flight,Travel
+Airline,Travel
+Delta,Travel
+United Airlines,Travel
+American Airlines,Travel
+Southwest,Travel
+Hotel,Travel
+Airbnb,Travel
+Marriott,Travel
+Hilton,Travel
+Resort,Travel
+Cruise,Travel
+Loan Payment,EMI & Loans
+Credit Card Payment,EMI & Loans
+Car Loan,EMI & Loans
+Personal Loan,EMI & Loans
+Mortgage Repayment,EMI & Loans
+EMI,EMI & Loans
+Stock Purchase,Investments
+Crypto,Investments
+Robinhood,Investments
+Coinbase,Investments
+Fidelity,Investments
+Vanguard,Investments
+Brokerage,Investments
+ETF,Investments
+Donation,Gifts & Donations
+Charity,Gifts & Donations
+Church,Gifts & Donations
+Red Cross,Gifts & Donations
+Gift,Gifts & Donations
+Birthday Gift,Gifts & Donations
+Wedding Gift,Gifts & Donations
+Misc,Miscellaneous
+Uncategorized,Miscellaneous
+Other,Miscellaneous
+Random,Miscellaneous
+Salary,Salary
+Paycheck,Salary
+Direct Deposit,Salary
+Employer,Salary
+Wages,Salary
+Upwork,Freelance
+Fiverr,Freelance
+Freelance Client,Freelance
+Contract Work,Freelance
+Consulting,Freelance
+Stripe,Business
+Shopify,Business
+Business Sale,Business
+Client Payment,Business
+Dividend,Investment Returns
+Interest,Investment Returns
+Capital Gains,Investment Returns
+Stock Sale,Investment Returns
+Rental Income,Rental Income
+Tenant Payment,Rental Income
+Property Income,Rental Income
+Bonus,Bonus
+Holiday Bonus,Bonus
+Performance Bonus,Bonus
+Refund,Other Income
+Cashback,Other Income
+Rebate,Other Income
+Found Money,Other Income
+Venmo Transfer,Other Income
+Cash App Receive,Other Income

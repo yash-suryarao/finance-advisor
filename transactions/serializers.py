@@ -1,8 +1,15 @@
+"""
+TRANSACTIONS MODULE - SERIALIZERS (transactions/serializers.py)
+---------------------------------------------------------------
+Converts financial ledger and budgeting models into JSON payload representations.
+"""
+
 from rest_framework import serializers
 from .models import Transaction, Budget, BudgetHistory, Category
 
 # ==========================================
 # 1. CATEGORY & TRANSACTIONS MODULE
+# Serializers mapping base ledger records.
 # ==========================================
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -23,6 +30,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 # ==========================================
 # 2. BUDGETING MODULE
+# Serializers for active caps and historical tracking.
 # ==========================================
 
 class BudgetSerializer(serializers.ModelSerializer):

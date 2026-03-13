@@ -1,18 +1,12 @@
 """
-URL configuration for backend project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+BACKEND MODULE - ROOT URLS (backend/urls.py)
+--------------------------------------------
+This is the master URL routing file for the entire Django project.
+It defines all top-level URL paths and delegates them to their respective app `urls.py` files.
+It is organized into three main sections:
+1. JWT Authentication Routes (Login/Refresh)
+2. Core API Routes (Transactions, Payments, Insights via DRF)
+3. App / Frontend Routes (HTML Views via Django Templates)
 """
 from django.contrib import admin
 from django.urls import path, include
@@ -28,16 +22,22 @@ from frontend.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # JWT Authentication Routes
+    # ==========================================
+    # 1. JWT Authentication Routes
+    # ==========================================
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),  # Refresh token
 
-    # Core App Routes
+    # ==========================================
+    # 2. Core API Routes
+    # ==========================================
     path('api/transactions/', include('transactions.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/insights/', include('insights.urls')),
     
-    # App Routes (Without API prefix for views or distinct patterns)
+    # ==========================================
+    # 3. App / Frontend HTML Routes
+    # ==========================================
     path('users/', include('users.urls')),
     path('admin_dashboard/', include('admin_dashboard.urls')),
     path('frontend/', include('frontend.urls')),

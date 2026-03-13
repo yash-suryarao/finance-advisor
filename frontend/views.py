@@ -1,3 +1,13 @@
+"""
+FRONTEND MODULE - VIEWS (frontend/views.py)
+-------------------------------------------
+This file serves the HTML templates and aggregates JSON data for the core dashboards.
+It is organized into three main sections:
+1. ADMIN / GLOBAL STATS: Aggregates total platform usage and statistics.
+2. DASHBOARD DATA APIs: Heavy data aggregation for the User Dashboard (Net balance, Savings rate, Health Score).
+3. PAGE RENDERING VIEWS: Basic template views routing to the HTML frontend.
+"""
+
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
@@ -16,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 
 # ==========================================
 # 1. ADMIN / GLOBAL STATS
+# Calculates global metrics (active users, total accuracy) for administrative views.
 # ==========================================
 
 @login_required
@@ -55,6 +66,9 @@ def dashboard_stats(request):
 
 # ==========================================
 # 2. DASHBOARD DATA APIs
+# These endpoints calculate the heavy math for the user dashboard UI components.
+# Includes `financial_summary` (calculating top-level metrics like Balance, Savings Rate, and Health Score),
+# and `spending_analysis` (compiling charting data for ECharts).
 # ==========================================
 
 @api_view(['GET'])
@@ -250,6 +264,7 @@ def spending_analysis(request):
 
 # ==========================================
 # 3. PAGE RENDERING VIEWS
+# Traditional Django template views that render the HTML pages securely if logged in.
 # ==========================================
 
 def login_view(request):
@@ -270,6 +285,7 @@ def transactions_page(request):
 @login_required
 def analysis_page(request):
     return render(request, 'frontend/analysis.html')
+    # return render(request, 'frontend/analysis_placeholder.html')
 
 @login_required
 def profile_page(request):

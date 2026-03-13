@@ -1,3 +1,16 @@
+"""
+INSIGHTS MODULE - UTILITIES (insights/utils.py)
+-----------------------------------------------
+This file contains all the heavy-lifting logic for the insights app.
+It houses the Machine Learning models, API integrations (Gemini), and Pandas data transformations.
+
+Main Features:
+- Isolation Forest (Anomaly Detection)
+- Prophet (Time-Series Forecasting)
+- XGBoost (Budget Reallocation heuristic simulation)
+- Gemini 2.0 (LLM Analysis & Subscriptions extraction)
+"""
+
 import pandas as pd
 from datetime import datetime, timedelta
 from transactions.models import Transaction, Budget
@@ -40,6 +53,10 @@ if genai and GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 
+# ==========================================
+# 1. DATA PROCESSING HELPER
+# ==========================================
+
 def get_user_transactions_df(user):
     """Fetches user transactions from the global real-time CSV export."""
     import os
@@ -75,6 +92,10 @@ def get_user_transactions_df(user):
     df["amount"] = df["amount"].astype(float)
     return df
 
+
+# ==========================================
+# 2. MACHINE LEARNING MODELS
+# ==========================================
 
 def detect_anomalies(user):
     """
@@ -194,6 +215,10 @@ def suggest_smart_budgets(user):
         
     return suggestions
 
+
+# ==========================================
+# 3. LLM GENERATION & FALLBACKS
+# ==========================================
 
 def generate_rule_based_insight(category_data):
     """

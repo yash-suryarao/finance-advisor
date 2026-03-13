@@ -1,3 +1,9 @@
+"""
+ANALYTICS MODULE - SERIALIZERS (analytics/serializers.py)
+---------------------------------------------------------
+JSON serialization for admin dashboard metrics and activity logs.
+"""
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from transactions.models import Transaction

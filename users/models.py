@@ -1,3 +1,13 @@
+"""
+USERS MODULE - MODELS (users/models.py)
+---------------------------------------
+This file defines the database schema for everything related to user accounts.
+It is organized into three main sections:
+1. CORE USER MODEL: Custom Django User model with UUIDs, roles, and email-based login.
+2. FINANCIAL PROFILE DATA: Stores static financial inputs (e.g., income, debt) per user.
+3. USER SETUP PROFILE: Stores demographic and settings data (e.g., goals, risk tolerance).
+"""
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
@@ -5,6 +15,8 @@ import uuid
 
 # ==========================================
 # 1. CORE USER MODEL
+# Custom User model overriding Django's default. Uses email for authentication
+# and UUIDs for secure primary keys.
 # ==========================================
 
 class User(AbstractUser):
@@ -31,6 +43,8 @@ class User(AbstractUser):
 
 # ==========================================
 # 2. FINANCIAL PROFILE DATA
+# 1-to-1 extension of the User model to store base financial inputs
+# required for the dashboard and algorithms.
 # ==========================================
 
 class FinancialData(models.Model):
@@ -39,11 +53,6 @@ class FinancialData(models.Model):
     monthly_income_business = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     monthly_income_freelance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     monthly_income_other = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    
-    # rent = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # bills = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # loans = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # subscriptions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
     savings_cash = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     savings_stocks = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -56,6 +65,8 @@ class FinancialData(models.Model):
         return f"{self.user.username} - Financial Data"
 # ==========================================
 # 3. USER SETUP PROFILE
+# 1-to-1 extension of the User model for demographic data, avatars,
+# and high-level financial goals/risk tolerances.
 # ==========================================
 
 class Profile(models.Model):

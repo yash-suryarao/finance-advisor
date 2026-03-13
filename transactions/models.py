@@ -1,3 +1,13 @@
+"""
+TRANSACTIONS MODULE - MODELS (transactions/models.py)
+-----------------------------------------------------
+This file defines the database schema for the financial ledger and budgeting system.
+It is organized into three main sections:
+1. CATEGORY & TRANSACTIONS MODULE: Core ledger entries (Transaction) and custom tags (Category).
+2. BUDGETING MODULE: Active monthly spending limits (Budget) and historical tracking (BudgetHistory).
+3. ALERTS & NOTIFICATIONS MODULE: Triggered system alerts related to transactions.
+"""
+
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -8,6 +18,8 @@ User = get_user_model()
 
 # ==========================================
 # 1. CATEGORY & TRANSACTIONS MODULE
+# Represents the core financial ledger, linking records to users and categories.
+# Includes an audit log (DeletedTransaction) for recovery.
 # ==========================================
 
 class Category(models.Model):
@@ -51,6 +63,7 @@ class DeletedTransaction(models.Model):
 
 # ==========================================
 # 2. BUDGETING MODULE
+# Represents active monthly goals and tracks performance over time.
 # ==========================================
 
 class Budget(models.Model):
@@ -76,6 +89,8 @@ class BudgetHistory(models.Model):
 
 # ==========================================
 # 3. ALERTS & NOTIFICATIONS MODULE
+# Deprecated/isolated alerts specifically for transaction anomalies.
+# Currently largely superseded by the main `notifications` app.
 # ==========================================
 
 class alerts(models.Model):

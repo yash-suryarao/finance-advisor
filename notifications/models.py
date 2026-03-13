@@ -1,3 +1,9 @@
+"""
+NOTIFICATIONS MODULE - MODELS (notifications/models.py)
+-------------------------------------------------------
+Defines the database schema for the system-wide notification infrastructure.
+"""
+
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.timezone import now
@@ -6,6 +12,7 @@ User = get_user_model()
 
 # ==========================================
 # 1. NOTIFICATION SYSTEM MODEL
+# Stores global or user-targeted alerts, messages, and their read status.
 # ==========================================
 
 class Notification(models.Model):

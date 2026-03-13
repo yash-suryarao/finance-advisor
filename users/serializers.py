@@ -1,3 +1,10 @@
+"""
+USERS MODULE - SERIALIZERS (users/serializers.py)
+-------------------------------------------------
+This file converts complex Django model instances into Python datatypes 
+(and eventually JSON) for the API, and provides validation for incoming data.
+"""
+
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import Profile, FinancialData
@@ -6,6 +13,7 @@ User = get_user_model()
 
 # ==========================================
 # 1. CORE AUTHENTICATION SERIALIZERS
+# Handles User creation, password hashing, and login validation.
 # ==========================================
 
 class UserSerializer(serializers.ModelSerializer):
@@ -57,6 +65,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
 # ==========================================
 # 2. PROFILE & FINANCIAL DATA SERIALIZERS
+# Handles the formatting of user profiles and static financial inputs.
 # ==========================================
 
 class ProfileSerializer(serializers.ModelSerializer):

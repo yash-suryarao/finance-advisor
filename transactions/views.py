@@ -1,3 +1,14 @@
+"""
+TRANSACTIONS MODULE - VIEWS (transactions/views.py)
+---------------------------------------------------
+This file handles the core financial data entry and retrieval for the user.
+It is organized into four main sections:
+1. CORE TRANSACTIONS MODULE: Endpoints to create, read, update, and delete transactions.
+2. CATEGORIES MODULE: Endpoints to list and auto-provision standard spending categories.
+3. BUDGETING MODULE: Endpoints to set monthly limits and track historical budgets.
+4. AI & AUTOMATIONS MODULE: Endpoints linking to the ML categorization models.
+"""
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -25,6 +36,8 @@ from .models import DeletedTransaction
 
 # ==========================================
 # 1. CORE TRANSACTIONS MODULE
+# Handles CRUD operations for the user's main transaction ledger.
+# Includes pagination, searching, filtering, and auto-categorization hooks.
 # ==========================================
 
 # View for fetching latest 10 transactions
@@ -121,6 +134,8 @@ class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 # ==========================================
 # 2. CATEGORIES MODULE
+# Manages the list of available categories. Auto-provisions the user's account
+# with a standard default set of Income and Expense buckets on first load.
 # ==========================================
 
 # View for fetching all categories
@@ -152,6 +167,8 @@ class CategoryListView(generics.ListAPIView):
 
 # ==========================================
 # 3. BUDGETING MODULE
+# Allows users to set hard limits (`monthly_limit`) on specific categories
+# and provides endpoints to query past performance (`BudgetHistory`).
 # ==========================================
 
 # View for fetching and creating budgets
@@ -176,7 +193,8 @@ class BudgetHistoryView(generics.ListAPIView):
 
 
 # ==========================================
-# 4. AI & AUTOMATIONS MODULE - CATEGORIZATION
+# 4. AI & AUTOMATIONS MODULE
+# Utility endpoints that interface with the machine learning models.
 # ==========================================
 
 @api_view(['POST'])

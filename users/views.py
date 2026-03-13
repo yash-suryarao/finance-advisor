@@ -1,6 +1,16 @@
+"""
+USERS MODULE - VIEWS (users/views.py)
+-------------------------------------
+This file handles user account management, authentication, and personalized settings.
+It is organized into four main sections:
+1. USER PROFILE & SETTINGS: Fetching and updating user profiles (e.g., Avatars).
+2. CORE AUTHENTICATION: Secure Signup, Login, and Logout logic (handling Sessions + JWT).
+3. FINANCIAL CONFIGS: Endpoints to manage base financial data inputs for users.
+4. NOTIFICATIONS API: Endpoints for broadcasting system alerts to users.
+"""
+
 from rest_framework import generics, status
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model, authenticate, login
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -18,6 +28,7 @@ from django.db.models import Sum
 
 # ==========================================
 # 1. USER PROFILE & SETTINGS
+# Handles fetching and updating profile-level data (like Avatars and Display Names).
 # ==========================================
 
 @api_view(['GET'])
@@ -39,6 +50,8 @@ def update_avatar(request):
 
 # ==========================================
 # 2. CORE AUTHENTICATION
+# Manages Signup, Login, and Logout processes, generating secure JWT 
+# `access` and `refresh` tokens, and binding Django sessions.
 # ==========================================
 
 class SignupView(APIView):
@@ -121,6 +134,7 @@ class ProfileSetupView(generics.RetrieveUpdateAPIView):
 
 # ==========================================
 # 3. FINANCIAL CONFIGS
+# Basic views to retrieve or update static financial inputs tied to a user.
 # ==========================================
 
 class FinancialInputView(generics.RetrieveUpdateAPIView):
@@ -142,7 +156,8 @@ class FinancialDataView(generics.RetrieveAPIView):
 
 
 
-### 🚀 User Profile API ###
+### 🚀 User Profile API 
+# Re-iterating profile fetch for dashboard rendering:
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
@@ -169,6 +184,7 @@ def user_profile(request):
 
 # ==========================================
 # 4. NOTIFICATIONS API
+# Fetches recent unread or global notifications for the user's bell icon.
 # ==========================================
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
