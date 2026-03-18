@@ -19,6 +19,11 @@ urlpatterns = [
     path('subscriptions/', views.get_subscriptions, name='get-subscriptions'),
     path('anomaly-heatmap/', views.get_anomaly_heatmap, name='anomaly-heatmap'),
 
+    # Analysis Page — Real Data Endpoints
+    path('analysis-summary/', views.get_analysis_summary, name='analysis-summary'),
+    path('spending-trends/', views.get_spending_trends, name='spending-trends'),
+    path('budget-trajectory/', views.get_budget_trajectory, name='budget-trajectory'),
+
     # ==========================================
     # 3. NOTIFICATIONS & 4. SAVINGS GOALS
     # ==========================================

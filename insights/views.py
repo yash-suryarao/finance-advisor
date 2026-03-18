@@ -160,6 +160,242 @@ def get_anomaly_heatmap(request):
     return Response(heatmap_data, status=status.HTTP_200_OK)
 
 
+# ==========================================
+# ANALYSIS PAGE REAL DATA ENDPOINTS
+# The following three views power the metric cards, spending trends
+# bar chart, and the Prophet ML trajectory on the Analysis page.
+# ==========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_analysis_summary(request):
+    """
+    Powers the 3 top metric cards on the Analysis page:
+    - Total Spent (This Month)
+    - Total Budget (Sum of all active limits)
+    - AI Savings Prediction (projected savings based on current pace)
+    """
+    user = request.user
+    today = datetime.today()
+    current_month = today.month
+    current_year = today.year
+
+    # 1. Total Expenses this month
+    monthly_expenses = float(
+        Transaction.objects.filter(
+            user=user, category_type='expense',
+            date__year=current_year, date__month=current_month
+        ).aggregate(total=Sum('amount'))['total'] or 0
+    )
+
+    # 2. Total monthly income this month
+    monthly_income = float(
+        Transaction.objects.filter(
+            user=user, category_type='income',
+            date__year=current_year, date__month=current_month
+        ).aggregate(total=Sum('amount'))['total'] or 0
+    )
+
+    # 3. Total active budget across all categories
+    total_budget = float(
+        TransactionsBudget.objects.filter(user=user).aggregate(
+            total=Sum('monthly_limit')
+        )['total'] or 0
+    )
+
+    # 4. AI projected savings —  extrapolate current spending pace to end of month
+    days_in_month = (datetime(current_year, current_month % 12 + 1, 1) if current_month < 12 else datetime(current_year + 1, 1, 1)) - timedelta(days=1)
+    days_elapsed = max(today.day, 1)
+    total_days = days_in_month.day
+
+    # Daily burn rate × remaining days = projected additional spend
+    daily_burn = monthly_expenses / days_elapsed
+    projected_total_spend = daily_burn * total_days
+    projected_savings = round(monthly_income - projected_total_spend, 2)
+
+    return Response({
+        'total_spent': monthly_expenses,
+        'total_budget': total_budget,
+        'projected_savings': projected_savings,
+        'monthly_income': monthly_income,
+        'days_elapsed': days_elapsed,
+        'total_days': total_days,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_spending_trends(request):
+    """
+    Returns last 6 months of:
+    - actual spending (bar)
+    - budget limits (dashed line)
+    Used to draw the Spending vs Budget Trends ECharts bar chart.
+    """
+    user = request.user
+    today = datetime.today()
+
+    months_labels = []
+    actual_spends = []
+    budget_limits = []
+
+    for i in range(5, -1, -1):
+        # Walk back i months from today
+        month = (today.month - 1 - i) % 12 + 1
+        year = today.year + ((today.month - 1 - i) // 12)
+
+        import calendar
+        label = calendar.month_abbr[month]
+
+        # Actual total expenses for this month
+        actual = float(
+            Transaction.objects.filter(
+                user=user, category_type='expense',
+                date__year=year, date__month=month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        )
+
+        # Sum of all active budget limits for that month from BudgetHistory
+        # Fall back to current budget limits if no history exists yet
+        hist_budget = float(
+            BudgetHistory.objects.filter(
+                user=user, year=year, month=month
+            ).aggregate(total=Sum('previous_limit'))['total'] or 0
+        )
+        if hist_budget == 0:
+            # Use current active limits as fallback
+            hist_budget = float(
+                TransactionsBudget.objects.filter(user=user).aggregate(
+                    total=Sum('monthly_limit')
+                )['total'] or 0
+            )
+
+        months_labels.append(label)
+        actual_spends.append(actual)
+        budget_limits.append(hist_budget)
+
+    return Response({
+        'months': months_labels,
+        'actual_spends': actual_spends,
+        'budget_limits': budget_limits,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_budget_trajectory(request):
+    """
+    Powers the Zero-Based Budget Trajectory chart.
+    Returns:
+    - `actual`: Cumulative real spend for each day of the current month up to today
+    - `predicted`: Prophet ML predicted cumulative spend for remaining days
+    - `days`: Day labels ['Day 1', 'Day 2', ...]
+    - `budget_limit`: Total monthly budget cap (the green reference line)
+    """
+    from insights.utils import get_user_transactions_df
+    user = request.user
+    today = datetime.today()
+    current_month = today.month
+    current_year = today.year
+    days_elapsed = today.day
+
+    # Total days in month
+    import calendar
+    total_days = calendar.monthrange(current_year, current_month)[1]
+
+    # Prepare daily expense data for this month from ORM (fast, no CSV needed)
+    daily_qs = (
+        Transaction.objects.filter(
+            user=user, category_type='expense',
+            date__year=current_year, date__month=current_month
+        )
+        .values('date')
+        .annotate(total=Sum('amount'))
+        .order_by('date')
+    )
+    daily_map = {entry['date'].day: float(entry['total']) for entry in daily_qs}
+
+    # Build cumulative actual spend series
+    cumulative = 0.0
+    actual = []
+    for day in range(1, total_days + 1):
+        if day <= days_elapsed:
+            cumulative += daily_map.get(day, 0.0)
+            actual.append(round(cumulative, 2))
+        else:
+            actual.append(None)  # No data yet for future days
+
+    # Build ML prediction from day_elapsed onward using linear extrapolation
+    # Use the daily average burn rate from days elapsed so far as the base rate
+    # Prophet forecasting only runs if there's enough history, otherwise we fall back
+    predicted = [None] * total_days
+
+    try:
+        df = get_user_transactions_df(user)
+        if not df.empty and len(df) >= 10:
+            try:
+                from prophet import Prophet
+                # Use last 60 days of daily spend to build a reliable Prophet model
+                sixty_days_ago = pd.Timestamp.now() - pd.Timedelta(days=60)
+                hist_df = df[(df['type'] == 'Expense') & (df['date'] >= sixty_days_ago)].copy()
+                if len(hist_df) >= 5:
+                    daily_hist = hist_df.groupby(hist_df['date'].dt.date)['amount'].sum().reset_index()
+                    daily_hist.columns = ['ds', 'y']
+                    daily_hist['ds'] = pd.to_datetime(daily_hist['ds'])
+
+                    m = Prophet(daily_seasonality=False, yearly_seasonality=False, weekly_seasonality=True)
+                    m.fit(daily_hist)
+
+                    # Predict the remaining days this month
+                    future_dates = pd.date_range(
+                        start=datetime(current_year, current_month, days_elapsed),
+                        end=datetime(current_year, current_month, total_days)
+                    )
+                    future_df = pd.DataFrame({'ds': future_dates})
+                    forecast = m.predict(future_df)
+
+                    # Convert to cumulative, starting from the last actual cumulative value
+                    last_actual = actual[days_elapsed - 1] or 0.0
+                    pred_cum = last_actual
+
+                    # Set anchor point at day_elapsed (same as last actual)
+                    predicted[days_elapsed - 1] = round(last_actual, 2)
+                    for idx, row in forecast.iloc[1:].iterrows():
+                        pred_cum += max(0, row['yhat'])
+                        day_num = row['ds'].day
+                        if 1 <= day_num <= total_days:
+                            predicted[day_num - 1] = round(pred_cum, 2)
+            except Exception:
+                # Prophet unavailable, fall back to linear extrapolation
+                pass
+    except Exception:
+        pass
+
+    # Linear extrapolation fallback if Prophet didn't populate predictions
+    if all(v is None for v in predicted[days_elapsed:]):
+        last_actual_val = actual[days_elapsed - 1] or 0.0
+        daily_avg = last_actual_val / days_elapsed if days_elapsed > 0 else 0
+        predicted[days_elapsed - 1] = round(last_actual_val, 2)  # anchor
+        running = last_actual_val
+        for day in range(days_elapsed, total_days):
+            running += daily_avg
+            predicted[day] = round(running, 2)
+
+    # Budget cap (total monthly limit)
+    total_budget = float(
+        TransactionsBudget.objects.filter(user=user).aggregate(
+            total=Sum('monthly_limit')
+        )['total'] or 0
+    )
+
+    return Response({
+        'days': [f'Day {i}' for i in range(1, total_days + 1)],
+        'actual': actual,
+        'predicted': predicted,
+        'budget_limit': total_budget,
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def category_insight_detail(request):

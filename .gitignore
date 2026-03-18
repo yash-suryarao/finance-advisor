@@ -5,7 +5,14 @@ venv/
 .env.*
 
 # Python cache
-__pycache__/
+admin_dashboard/__pycache__/*
+insights/__pycache__/*
+users/__pycache__/*
+analytics/__pycache__/*
+backend/__pycache__/*
+frontend/__pycache__/*
+transactions/__pycache__/*
+notification/__pycache__/*
 *.pyc
 *.pyo
 *.pyd

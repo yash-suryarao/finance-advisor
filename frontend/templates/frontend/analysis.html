@@ -202,158 +202,250 @@
     </div>
 
     <script>
-        async function fetchAnalysisData() {
+        // ============================================================
+        // HELPER: Get auth headers for all fetch calls
+        // ============================================================
+        function authHeaders() {
+            const token = localStorage.getItem('access_token');
+            return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        }
+
+        // ============================================================
+        // 1. METRIC CARDS — Powered by /api/insights/analysis-summary/
+        // ============================================================
+        async function fetchAnalysisSummary() {
             try {
-                const token = localStorage.getItem('access_token');
-                const headers = { 'Authorization': `Bearer ${token}` };
+                const res = await fetch('/api/insights/analysis-summary/', { headers: authHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
 
-                // Fetch mock or actual data for the charts
-                // Reusing budget and transaction endpoints to populate graphs effectively
-                const budgetRes = await fetch('/api/insights/budget-insights/', { headers });
-                const budgetData = await fetch('/api/transactions/budget/', { headers });
+                // Format numbers as Indian rupee strings
+                const fmt = (n) => '₹' + Math.abs(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-                // Initialize Echarts
-                const trendsChart = echarts.init(document.getElementById('trendsChart'));
-                const categoryChart = echarts.init(document.getElementById('categoryChart'));
+                document.getElementById('totalSpent').textContent = fmt(data.total_spent);
+                document.getElementById('totalBudget').textContent = fmt(data.total_budget);
 
-                // Demo Data for comparative trends
-                const months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
-                const actualSpends = [24000, 26000, 23000, 31000, 22000, 15000];
-                const budgetLimits = [25000, 25000, 25000, 25000, 26000, 26000];
+                const savEl = document.getElementById('projectedSavings');
+                savEl.textContent = fmt(data.projected_savings);
+                savEl.classList.toggle('text-red-600', data.projected_savings < 0);
+                savEl.classList.toggle('text-indigo-600', data.projected_savings >= 0);
 
-                trendsChart.setOption({
-                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                    legend: { data: ['Actual Spend', 'Budget Limit'], bottom: 0 },
-                    grid: { top: 30, right: 20, bottom: 40, left: 50 },
-                    xAxis: { type: 'category', data: months },
-                    yAxis: { type: 'value' },
-                    series: [
-                        { name: 'Actual Spend', type: 'bar', data: actualSpends, itemStyle: { color: '#6366f1', borderRadius: [4, 4, 0, 0] }, barWidth: '30%' },
-                        { name: 'Budget Limit', type: 'line', data: budgetLimits, itemStyle: { color: '#ec4899' }, lineStyle: { width: 3, type: 'dashed' }, symbol: 'circle', symbolSize: 8 }
-                    ]
-                });
-
-                categoryChart.setOption({
-                    tooltip: { trigger: 'item' },
-                    legend: { show: false },
-                    series: [
-                        {
-                            name: 'Category',
-                            type: 'pie',
-                            radius: ['40%', '70%'],
-                            itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-                            label: { show: true, formatter: '{b}\n{d}%' },
-                            data: [
-                                { value: 6500, name: 'Food', itemStyle: { color: '#f97316' } },
-                                { value: 4000, name: 'Transport', itemStyle: { color: '#3b82f6' } },
-                                { value: 9000, name: 'Housing', itemStyle: { color: '#14b8a6' } },
-                                { value: 2500, name: 'Entertainment', itemStyle: { color: '#ec4899' } }
-                            ]
-                        }
-                    ]
-                });
-
-                window.addEventListener('resize', () => {
-                    trendsChart.resize();
-                    categoryChart.resize();
-                });
-
-                // Populate AI Analysis dummy data for aesthetics (removed since we have real stuff now)
-                document.getElementById('aiAnalysisBox').innerHTML = `
-                    <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-indigo-200 text-center text-gray-500">
-                        <i class="ri-history-line text-2xl mb-2 block"></i>
-                        <p class="text-sm">AI context generated on demand.</p>
-                    </div>`;
-
+                // Store for export
+                window._analysisSummary = data;
             } catch (e) {
-                console.error("Error loading analysis charts", e);
+                console.error('Failed to fetch analysis summary', e);
             }
         }
 
+        // ============================================================
+        // 2. SPENDING vs BUDGET TRENDS — /api/insights/spending-trends/
+        // ============================================================
+        async function fetchSpendingTrends() {
+            try {
+                const res = await fetch('/api/insights/spending-trends/', { headers: authHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const trendsChart = echarts.init(document.getElementById('trendsChart'));
+                trendsChart.setOption({
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    legend: { data: ['Actual Spend', 'Budget Limit'], bottom: 0 },
+                    grid: { top: 30, right: 20, bottom: 50, left: 60 },
+                    xAxis: { type: 'category', data: data.months },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
+                    },
+                    series: [
+                        {
+                            name: 'Actual Spend',
+                            type: 'bar',
+                            data: data.actual_spends,
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#818cf8' },
+                                    { offset: 1, color: '#6366f1' }
+                                ]),
+                                borderRadius: [6, 6, 0, 0]
+                            },
+                            barWidth: '35%'
+                        },
+                        {
+                            name: 'Budget Limit',
+                            type: 'line',
+                            data: data.budget_limits,
+                            itemStyle: { color: '#ec4899' },
+                            lineStyle: { width: 3, type: 'dashed' },
+                            symbol: 'circle',
+                            symbolSize: 8
+                        }
+                    ]
+                });
+                window.addEventListener('resize', () => trendsChart.resize());
+                // Store for export
+                window._spendingTrends = data;
+            } catch (e) {
+                console.error('Spending trends failed', e);
+            }
+        }
+
+        // ============================================================
+        // 3. TRAJECTORY CHART — /api/insights/budget-trajectory/
+        //    Real cumulative spend + Prophet ML prediction
+        // ============================================================
+        async function fetchTrajectory() {
+            try {
+                const res = await fetch('/api/insights/budget-trajectory/', { headers: authHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const trajChart = echarts.init(document.getElementById('trajectoryChart'));
+
+                // Build budget cap reference line (flat horizontal)
+                const budgetLine = data.days.map(() => data.budget_limit > 0 ? data.budget_limit : null);
+
+                trajChart.setOption({
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: (params) => {
+                            let html = `<b>${params[0].axisValueLabel}</b><br/>`;
+                            params.forEach(p => {
+                                if (p.value != null)
+                                    html += `${p.marker} ${p.seriesName}: ₹${p.value.toLocaleString('en-IN')}<br/>`;
+                            });
+                            return html;
+                        }
+                    },
+                    legend: { data: ['Actual Spend', 'ML Prediction', 'Budget Cap'], bottom: 0 },
+                    grid: { top: 30, right: 20, bottom: 50, left: 65 },
+                    xAxis: { type: 'category', boundaryGap: false, data: data.days },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
+                    },
+                    series: [
+                        {
+                            name: 'Actual Spend',
+                            type: 'line',
+                            data: data.actual,
+                            connectNulls: false,
+                            itemStyle: { color: '#6366f1' },
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: 'rgba(99,102,241,0.3)' },
+                                    { offset: 1, color: 'rgba(99,102,241,0.01)' }
+                                ])
+                            },
+                            smooth: true,
+                            symbol: 'none'
+                        },
+                        {
+                            name: 'ML Prediction',
+                            type: 'line',
+                            data: data.predicted,
+                            connectNulls: false,
+                            itemStyle: { color: '#f59e0b' },
+                            lineStyle: { width: 2.5, type: 'dashed' },
+                            smooth: true,
+                            symbol: 'none'
+                        },
+                        {
+                            name: 'Budget Cap',
+                            type: 'line',
+                            data: budgetLine,
+                            itemStyle: { color: '#10b981' },
+                            lineStyle: { width: 2, type: 'dotted' },
+                            symbol: 'none'
+                        }
+                    ]
+                });
+                window.addEventListener('resize', () => trajChart.resize());
+
+                // Update the AI Savings Prediction context box
+                const lastPredicted = [...data.predicted].reverse().find(v => v != null);
+                if (lastPredicted && window._analysisSummary) {
+                    const projectedEOM = lastPredicted;
+                    const income = window._analysisSummary.monthly_income;
+                    const projSave = Math.round(income - projectedEOM);
+                    const aiBox = document.getElementById('aiAnalysisBox');
+                    const status = projSave > 0 ? `🟢 On track to <strong>save ₹${projSave.toLocaleString('en-IN')}</strong> by end of month.` :
+                        `🔴 On track to <strong>overspend by ₹${Math.abs(projSave).toLocaleString('en-IN')}</strong>. Consider reducing expenses.`;
+                    aiBox.innerHTML = `
+                        <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-indigo-500 mb-3">
+                            <h5 class="font-bold text-gray-800 text-sm mb-1">📈 Spending Trajectory</h5>
+                            <p class="text-gray-600 text-sm">${status}</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-amber-400 mb-3">
+                            <h5 class="font-bold text-gray-800 text-sm mb-1">🤖 ML Projection</h5>
+                            <p class="text-gray-600 text-sm">Prophet model predicts end-of-month cumulative spend of <strong>₹${projectedEOM.toLocaleString('en-IN')}</strong>.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg shadow-sm border-l-4 border-green-400">
+                            <h5 class="font-bold text-gray-800 text-sm mb-1">💡 Tip</h5>
+                            <p class="text-gray-600 text-sm">Track your daily spend against the <span class="text-green-600 font-medium">Budget Cap</span> line to identify when you're at risk of overspending.</p>
+                        </div>`;
+                }
+
+                window._trajectoryData = data;
+            } catch (e) {
+                console.error('Trajectory chart failed', e);
+            }
+        }
+
+        // ============================================================
+        // 4. ANOMALY HEATMAP — /api/insights/anomaly-heatmap/
+        // ============================================================
         async function fetchHeatmapData() {
             try {
-                const token = localStorage.getItem('access_token');
-                if (!token) return;
-                const headers = { 'Authorization': `Bearer ${token}` };
-                const res = await fetch('/api/insights/anomaly-heatmap/', { headers });
-
+                const res = await fetch('/api/insights/anomaly-heatmap/', { headers: authHeaders() });
                 if (!res.ok) return;
                 const data = await res.json();
 
                 if (data.length === 0) {
-                    document.getElementById('heatmapChart').innerHTML = "<div class='flex items-center justify-center h-full text-gray-400'>Not enough data to calculate anomalies yet.</div>";
+                    document.getElementById('heatmapChart').innerHTML = "<div class='flex items-center justify-center h-full text-gray-400 text-sm'>Not enough data to calculate anomalies yet. Add more transactions!</div>";
                     return;
                 }
 
                 const heatmapChart = echarts.init(document.getElementById('heatmapChart'));
-
-                // Format for ECharts calendar heatmap: data is [date, amount]
-                // We'll use visualMap to highlight anomalies (data[2] == true)
                 const chartData = data.map(item => [item[0], item[1]]);
-
-                // Determine min/max for visual mapping
                 const amounts = data.map(i => i[1]);
                 const maxAmt = Math.max(...amounts);
-
-                // Create a list of anomaly dates for custom highlighting in tooltip or visual map
                 const anomalyDates = data.filter(i => i[2]).map(i => i[0]);
 
                 heatmapChart.setOption({
                     tooltip: {
-                        formatter: function (p) {
-                            const date = p.data[0];
-                            const amt = p.data[1];
-                            const isAnomaly = anomalyDates.includes(date);
-                            const badge = isAnomaly ? '<br/><span style="color:red;font-weight:bold;">⚠️ High Spend Anomaly</span>' : '';
-                            return `${date}: ₹${amt}${badge}`;
+                        formatter: (p) => {
+                            const isAnomaly = anomalyDates.includes(p.data[0]);
+                            const badge = isAnomaly ? '<br/><span style="color:#ef4444;font-weight:bold;">⚠️ High Spend Anomaly</span>' : '';
+                            return `${p.data[0]}: <b>₹${p.data[1].toLocaleString('en-IN')}</b>${badge}`;
                         }
                     },
                     visualMap: {
-                        min: 0,
-                        max: maxAmt,
-                        calculable: true,
-                        orient: 'horizontal',
-                        left: 'center',
-                        bottom: 0,
-                        inRange: {
-                            color: ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'] // Standard green commit style
-                        }
+                        min: 0, max: maxAmt, calculable: true,
+                        orient: 'horizontal', left: 'center', bottom: 0,
+                        inRange: { color: ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'] }
                     },
                     calendar: {
-                        top: 20,
-                        bottom: 40,
-                        left: 30,
-                        right: 30,
+                        top: 20, bottom: 40, left: 30, right: 30,
                         cellSize: ['auto', 20],
                         range: [data[0][0], data[data.length - 1][0]],
-                        itemStyle: {
-                            borderWidth: 0.5
-                        },
+                        itemStyle: { borderWidth: 0.5 },
                         yearLabel: { show: false }
                     },
-                    series: {
-                        type: 'heatmap',
-                        coordinateSystem: 'calendar',
-                        data: chartData
-                    }
+                    series: { type: 'heatmap', coordinateSystem: 'calendar', data: chartData }
                 });
-
                 window.addEventListener('resize', () => heatmapChart.resize());
-
             } catch (e) {
                 console.error('Heatmap failed', e);
             }
         }
 
+        // ============================================================
+        // 5. SUBSCRIPTIONS — /api/insights/subscriptions/
+        // ============================================================
         async function fetchSubscriptions() {
             const listEl = document.getElementById('subscriptionsList');
             try {
-                const token = localStorage.getItem('access_token');
-                if (!token) return;
-                const res = await fetch('/api/insights/subscriptions/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
+                const res = await fetch('/api/insights/subscriptions/', { headers: authHeaders() });
                 if (!res.ok) throw new Error("Failed to fetch");
                 const subs = await res.json();
 
@@ -361,17 +453,17 @@
                 if (subs.length === 0) {
                     listEl.innerHTML = `<div class="p-6 text-center text-gray-500">
                         <i class="ri-check-line text-green-500 text-3xl block mb-2"></i>
-                        <p class="text-sm">No recurring monthly subscriptions detected in recent history.</p>
+                        <p class="text-sm">No recurring subscriptions detected in the last 90 days.</p>
                     </div>`;
                     return;
                 }
 
                 subs.forEach(sub => {
                     listEl.innerHTML += `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-indigo-50 transition">
                             <div class="flex items-center">
-                                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mr-3 font-bold">
-                                    ${sub.service_name.charAt(0)}
+                                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mr-3 font-bold text-sm">
+                                    ${sub.service_name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-gray-800 text-sm">${sub.service_name}</h4>
@@ -379,96 +471,30 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <span class="font-bold text-gray-900">₹${sub.estimated_monthly_cost}</span>
+                                <span class="font-bold text-gray-900">₹${sub.estimated_monthly_cost.toLocaleString('en-IN')}</span>
                                 <p class="text-[10px] text-gray-400 uppercase">/month</p>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 });
+                window._subsData = subs;
             } catch (e) {
                 listEl.innerHTML = `<div class="p-4 text-center text-red-500 text-sm">Could not extract subscriptions at this time.</div>`;
             }
         }
 
-        async function fetchTrajectory() {
-            try {
-                const token = localStorage.getItem('access_token');
-                if (!token) return;
-                // Currently just using a static dummy to represent the concept since we need prophet output
-                // that spans the exact month range. We'll populate estmiated trajectory.
-                const trajChart = echarts.init(document.getElementById('trajectoryChart'));
-
-                const days = Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`);
-
-                // create an S-curve spending pattern
-                let actual = [];
-                let current = 0;
-                let today = new Date().getDate(); // Simulate current day of month
-
-                for (let i = 0; i < 30; i++) {
-                    if (i < today) {
-                        current += Math.random() * 800 + 200;
-                        actual.push(Math.round(current));
-                    } else {
-                        actual.push(null);
-                    }
-                }
-
-                // ML prediction continues from last known point
-                let prediction = Array(30).fill(null);
-                prediction[today - 1] = actual[today - 1];
-                let curPred = actual[today - 1];
-                for (let i = today; i < 30; i++) {
-                    curPred += 650; // ML simulated daily trajectory
-                    prediction[i] = Math.round(curPred);
-                }
-
-                trajChart.setOption({
-                    tooltip: { trigger: 'axis' },
-                    legend: { data: ['Actual Spend', 'Predicted Spend'], bottom: 0 },
-                    grid: { top: 30, right: 20, bottom: 40, left: 50 },
-                    xAxis: { type: 'category', boundaryGap: false, data: days },
-                    yAxis: { type: 'value' },
-                    series: [
-                        {
-                            name: 'Actual Spend',
-                            type: 'line',
-                            data: actual,
-                            itemStyle: { color: '#6366f1' },
-                            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#818cf850' }, { offset: 1, color: '#818cf800' }]) },
-                            smooth: true,
-                            symbol: 'none'
-                        },
-                        {
-                            name: 'Predicted Spend',
-                            type: 'line',
-                            data: prediction,
-                            itemStyle: { color: '#f59e0b' },
-                            lineStyle: { width: 3, type: 'dashed' },
-                            smooth: true,
-                            symbol: 'none'
-                        }
-                    ]
-                });
-
-                window.addEventListener('resize', () => trajChart.resize());
-            } catch (e) { }
-        }
-
-        // --- Explainable AI Modal Logic ---
+        // ============================================================
+        // 6. XAI MODAL — /api/insights/monthly-review/
+        // ============================================================
         const xaiModal = document.getElementById('xaiModal');
         const xaiLoading = document.getElementById('xaiLoading');
         const xaiResult = document.getElementById('xaiResult');
 
         function openXAIModal() {
             xaiModal.classList.remove('hidden');
-            // small delay for transition
             setTimeout(() => {
                 xaiModal.classList.remove('opacity-0');
                 xaiModal.children[0].classList.remove('scale-95');
             }, 10);
-
-            // Only fetch if we haven't already
             if (xaiResult.classList.contains('hidden')) {
                 executeXAIFetch();
             }
@@ -477,103 +503,131 @@
         function closeXAIModal() {
             xaiModal.classList.add('opacity-0');
             xaiModal.children[0].classList.add('scale-95');
-            setTimeout(() => {
-                xaiModal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => xaiModal.classList.add('hidden'), 300);
         }
 
         async function executeXAIFetch() {
             try {
-                const token = localStorage.getItem('access_token');
-                const res = await fetch('/api/insights/monthly-review/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
+                const res = await fetch('/api/insights/monthly-review/', { headers: authHeaders() });
+                if (!res.ok) throw new Error(res.status);
                 const data = await res.json();
 
-                // Hide loading, show results
                 xaiLoading.classList.add('hidden');
                 xaiResult.classList.remove('hidden');
 
-                // Populate text
                 document.getElementById('xaiWhatHappened').innerText = data.what_happened || "Analysis complete.";
                 document.getElementById('xaiWhyItMatters').innerText = data.why_it_matters || "Keep tracking to improve.";
 
-                // Populate recommendations
                 const recBox = document.getElementById('xaiRecommendationsBox');
                 recBox.innerHTML = '';
 
                 if (data.recommendations && data.recommendations.length > 0) {
                     data.recommendations.forEach(rec => {
-                        let icon = rec.type === 'budget' ? 'ri-pie-chart-line' : 'ri-target-line';
-                        let actionText = rec.type === 'budget' ? 'Set Strict Budget' : 'Start Goal';
-                        let color = rec.type === 'budget' ? 'pink' : 'green';
-
+                        const icon = rec.type === 'budget' ? 'ri-pie-chart-line' : 'ri-target-line';
+                        const actionText = rec.type === 'budget' ? 'Set Strict Budget' : 'Start Goal';
+                        const color = rec.type === 'budget' ? 'pink' : 'green';
                         recBox.innerHTML += `
-                            <div class="border border-gray-200 rounded-xl p-5 hover:border-${color}-300 transition bg-white flex flex-col h-full shadow-sm">
+                            <div class="border border-gray-200 rounded-xl p-5 hover:border-${color}-300 transition bg-white flex flex-col shadow-sm">
                                 <div class="flex items-center mb-3 text-${color}-600 font-bold uppercase text-xs tracking-wider">
                                     <i class="${icon} mr-1 text-base"></i> Recommended ${rec.type}
                                 </div>
-                                <h5 class="font-bold text-gray-900 mb-1 text-lg">${rec.category} (₹${rec.amount})</h5>
+                                <h5 class="font-bold text-gray-900 mb-1 text-lg">${rec.category} (₹${rec.amount.toLocaleString('en-IN')})</h5>
                                 <p class="text-xs text-gray-600 mb-4 flex-grow">${rec.reason}</p>
-                                <button class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded-lg text-sm font-medium transition cursor-pointer">
+                                <button onclick="handleXAIAction('${rec.type}', '${rec.category}', ${rec.amount})"
+                                    class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded-lg text-sm font-medium transition cursor-pointer">
                                     ${actionText}
                                 </button>
-                            </div>
-                        `;
+                            </div>`;
                     });
                 } else {
-                    recBox.innerHTML = `<p class="text-gray-500 text-sm">You are doing perfectly. No immediate actions required.</p>`;
+                    recBox.innerHTML = `<p class="text-gray-500 text-sm col-span-2">You are doing great! No immediate actions required.</p>`;
                 }
-
             } catch (error) {
-                xaiLoading.innerHTML = `<div class="text-red-500 text-center"><i class="ri-error-warning-line text-3xl block mb-2"></i> Failed to generate report.</div>`;
+                xaiLoading.innerHTML = `<div class="text-red-500 text-center"><i class="ri-error-warning-line text-3xl block mb-2"></i> Failed to generate AI report. Please try again.</div>`;
             }
         }
 
-        // --- Export Logic ---
-        // function exportReport() {
-        //     try {
-        //         // Collect basic metrics
-        //         const totalSpent = document.getElementById('totalSpent').innerText;
-        //         const totalBudget = document.getElementById('totalBudget').innerText;
-        //         const projectedSavings = document.getElementById('projectedSavings').innerText;
+        // Handle Set Budget / Set Goal from XAI recommendations
+        async function handleXAIAction(type, category, amount) {
+            const token = localStorage.getItem('access_token');
+            if (type === 'budget') {
+                const res = await fetch('/api/insights/accept-suggested-budget/', {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ category, new_limit: amount })
+                });
+                const d = await res.json();
+                alert(d.message || 'Budget updated!');
+            } else {
+                alert(`Goal feature: Set a ₹${amount.toLocaleString('en-IN')} goal for "${category}" in the Goals section.`);
+            }
+        }
 
-        //         // Create CSV content
-        //         let csvContent = "data:text/csv;charset=utf-8,";
-        //         csvContent += "Financial Analysis Report\n\n";
+        // ============================================================
+        // 7. EXPORT REPORT — Assembles real data into a CSV
+        // ============================================================
+        async function exportReport() {
+            try {
+                // Ensure summary data is loaded
+                const summary = window._analysisSummary;
+                const trends = window._spendingTrends;
+                if (!summary) {
+                    alert('Please wait for data to load before exporting.');
+                    return;
+                }
 
-        //         csvContent += "Key Metrics\n";
-        //         csvContent += `Metric,Value\n`;
-        //         csvContent += `Total Spent (This Month),${totalSpent}\n`;
-        //         csvContent += `Total Budget,${totalBudget}\n`;
-        //         csvContent += `AI Savings Prediction,${projectedSavings}\n\n`;
+                const today = new Date().toISOString().split('T')[0];
+                let csv = `AI Finance Advisor — Financial Report\nGenerated: ${today}\n\n`;
 
-        //         csvContent += "Explanation\n";
-        //         csvContent += "This report contains a top-level summary of your current financial metrics.\n";
-        //         csvContent += "For a deeper dive into your anomaly spending and hidden subscriptions, please use the Gemini 2.0 Review feature.\n";
+                csv += `KEY METRICS\n`;
+                csv += `Metric,Value\n`;
+                csv += `Total Spent (This Month),₹${summary.total_spent.toLocaleString('en-IN')}\n`;
+                csv += `Total Budget,₹${summary.total_budget.toLocaleString('en-IN')}\n`;
+                csv += `Monthly Income,₹${summary.monthly_income.toLocaleString('en-IN')}\n`;
+                csv += `AI Projected Savings,₹${summary.projected_savings.toLocaleString('en-IN')}\n`;
+                csv += `Days Elapsed,${summary.days_elapsed} of ${summary.total_days}\n\n`;
 
-        //         // Generate download
-        //         const encodedUri = encodeURI(csvContent);
-        //         const link = document.createElement("a");
-        //         link.setAttribute("href", encodedUri);
-        //         link.setAttribute("download", `Financial_Report_${new Date().toISOString().split('T')[0]}.csv`);
-        //         document.body.appendChild(link);
+                if (trends) {
+                    csv += `LAST 6 MONTHS SPENDING TRENDS\n`;
+                    csv += `Month,Actual Spend,Budget Limit\n`;
+                    trends.months.forEach((m, i) => {
+                        csv += `${m},₹${trends.actual_spends[i]},₹${trends.budget_limits[i]}\n`;
+                    });
+                    csv += '\n';
+                }
 
-        //         link.click();
-        //         document.body.removeChild(link);
+                if (window._subsData && window._subsData.length > 0) {
+                    csv += `DETECTED SUBSCRIPTIONS\n`;
+                    csv += `Service,Estimated Monthly Cost\n`;
+                    window._subsData.forEach(s => {
+                        csv += `${s.service_name},₹${s.estimated_monthly_cost}\n`;
+                    });
+                }
 
-        //     } catch (e) {
-        //         console.error("Failed to export report Data", e);
-        //         alert("Could not export the report at this time. Please try again later.");
-        //     }
-        // }
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `Finance_Report_${today}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error("Export failed", e);
+                alert("Could not export report. Please try again.");
+            }
+        }
 
-        // Initialize all
-        fetchAnalysisData();
-        fetchHeatmapData();
-        fetchSubscriptions();
-        fetchTrajectory();
+        (async function init() {
+            // Run metric cards first so trajectory can use income for AI context
+            await fetchAnalysisSummary();
+            // Run charts in parallel — all independent
+            fetchSpendingTrends();
+            fetchTrajectory();
+            fetchHeatmapData();
+            fetchSubscriptions();
+        })();
     </script>
     <script src="{% static 'frontend/js/nav.js' %}?v=1.1"></script>
 </body>
