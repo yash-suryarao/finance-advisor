@@ -175,14 +175,29 @@
                     </div>
                 </div>
 
-                <!-- Budget Overview (Right - 1 column span) -->
+                <!-- Budget Overview -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[490px]">
                     <div class="flex justify-between items-center mb-6 pt-1">
                         <h3 class="text-lg font-semibold text-gray-900">Budget Overview</h3>
-                        <button onclick="document.getElementById('addBudgetModal').classList.remove('hidden')"
-                            class="text-sm font-semibold text-gray-700 hover:text-black transition flex items-center">
-                            <i class="ri-add-line mr-1 text-lg"></i> Add Budget
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <!-- AI Suggest All: uses XGBoost 3-month average to suggest limits -->
+                            <button onclick="openAISuggestModal()"
+                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1"
+                                title="AI suggests budget limits from your 3-month history">
+                                <i class="ri-sparkling-fill"></i> AI Suggest
+                            </button>
+                            <!-- AI Plan: 50/30/20 zero-based budget planner with Gemini -->
+                            <!-- <button onclick="openAIPlannerModal()"
+                                class="text-xs font-semibold text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1"
+                                title="Zero-based AI budget plan using your income">
+                                <i class="ri-pie-chart-2-line"></i> AI Plan
+                            </button> -->
+                            <!-- Manual Add Budget button -->
+                            <button onclick="document.getElementById('addBudgetModal').classList.remove('hidden')"
+                                class="text-xs font-semibold text-gray-700 hover:text-black transition flex items-center gap-1">
+                                <i class="ri-add-line text-base"></i> Add
+                            </button>
+                        </div>
                     </div>
 
                     <div class="relative flex-1 overflow-hidden">
@@ -239,6 +254,119 @@
     </div>
 
     <!-- Add Budget Modal -->
+
+    <!-- ==========================================
+         AI BUDGET PLANNER MODAL
+         Allows user to enter income and get a full
+         50/30/20 AI-generated budget allocation plan.
+    ============================================ -->
+    <div id="aiBudgetPlannerModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <i class="ri-pie-chart-2-line text-purple-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">AI Budget Planner</h3>
+                        <p class="text-xs text-gray-500">50/30/20 rule &bull; Personalised to your spending history</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('aiBudgetPlannerModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <!-- Income Input -->
+            <div id="plannerInputSection" class="p-6 shrink-0">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Your Monthly Income</label>
+                <div class="flex gap-3">
+                    <div class="relative flex-1">
+                        <span class="absolute left-4 top-3 text-gray-500 font-semibold">₹</span>
+                        <input type="number" id="plannerIncomeInput"
+                            class="w-full p-3 pl-8 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+                            placeholder="e.g. 75000" />
+                    </div>
+                    <button id="generatePlanBtn" onclick="generateAIBudgetPlan()"
+                        class="px-6 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                        <i class="ri-sparkling-2-fill"></i> Generate Plan
+                    </button>
+                </div>
+            </div>
+            <!-- Plan Results -->
+            <div id="plannerResults" class="hidden flex-1 overflow-y-auto px-6 pb-6">
+                <!-- AI Summary Banner -->
+                <div id="plannerSummary"
+                    class="p-4 bg-purple-50 border border-purple-100 rounded-xl mb-5 text-sm text-purple-800 font-medium leading-relaxed">
+                </div>
+                <!-- 50/30/20 Legend -->
+                <div class="flex gap-4 mb-4">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-blue-700"><span
+                            class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>Needs (50%)</span>
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-purple-700"><span
+                            class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span>Wants (30%)</span>
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-green-700"><span
+                            class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>Savings (20%)</span>
+                </div>
+                <!-- Allocation Table -->
+                <div id="plannerTable" class="space-y-2.5"></div>
+                <!-- Footer Actions -->
+                <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">
+                    <p class="text-xs text-gray-500">Apply All will create/update budget limits for all categories.</p>
+                    <button onclick="applyAllPlanBudgets()"
+                        class="px-6 py-2.5 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition shadow-sm flex items-center gap-2">
+                        <i class="ri-check-double-line"></i> Apply All Budgets
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         AI SUGGEST ALL MODAL
+         Shows AI-recommended budget limits per
+         category based on 3-month averages + XGBoost.
+    ============================================ -->
+    <div id="aiSuggestModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <i class="ri-sparkling-fill text-indigo-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">AI Budget Suggestions</h3>
+                        <p class="text-xs text-gray-500">Based on your 3-month spending &bull; XGBoost optimised</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('aiSuggestModal').classList.add('hidden')"
+                    class="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+            </div>
+            <!-- Suggestions List -->
+            <div id="aiSuggestList" class="flex-1 overflow-y-auto p-6 space-y-3">
+                <div class="flex items-center justify-center py-10 text-indigo-500">
+                    <i class="ri-loader-4-line animate-spin text-3xl mr-3"></i>
+                    <span class="text-sm font-semibold">Analysing your spending history...</span>
+                </div>
+            </div>
+            <!-- Footer -->
+            <div class="p-6 border-t border-gray-100 flex justify-between items-center shrink-0">
+                <p class="text-xs text-gray-400">Click <strong>Set</strong> to apply a single suggestion, or apply all
+                    at once.</p>
+                <button onclick="applyAllSuggestions()"
+                    class="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-sm flex items-center gap-2">
+                    <i class="ri-check-double-line"></i> Apply All
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="addBudgetModal"
         class="hidden fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity">
         <div class="bg-white p-6 rounded-2xl shadow-xl w-96 max-w-[90%] transform transition-all">
@@ -254,12 +382,32 @@
             <select id="budgetCategory"
                 class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl mb-5 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition appearance-none cursor-pointer">
                 <option value="" disabled selected>Select category</option>
-                <option value="Food">Food & Dining</option>
-                <option value="Transport">Transportation</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Other">Other</option>
+                <optgroup label="-- Expenses --">
+                    <option value="Food &amp; Dining">Food &amp; Dining</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Bills &amp; Utilities">Bills &amp; Utilities</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Health &amp; Medical">Health &amp; Medical</option>
+                    <option value="Education">Education</option>
+                    <option value="Rent &amp; Housing">Rent &amp; Housing</option>
+                    <option value="Personal Care">Personal Care</option>
+                    <option value="Travel">Travel</option>
+                    <option value="EMI &amp; Loans">EMI &amp; Loans</option>
+                    <option value="Investments">Investments</option>
+                    <option value="Gifts &amp; Donations">Gifts &amp; Donations</option>
+                    <option value="Subscriptions">Subscriptions</option>
+                    <option value="Miscellaneous">Miscellaneous</option>
+                </optgroup>
+                <optgroup label="-- Income --">
+                    <option value="Salary">Salary</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Business">Business</option>
+                    <option value="Investment Returns">Investment Returns</option>
+                    <option value="Rental Income">Rental Income</option>
+                    <option value="Bonus">Bonus</option>
+                    <option value="Other Income">Other Income</option>
+                </optgroup>
             </select>
 
             <label class="block text-sm font-semibold text-gray-700 mb-1.5">Budget Amount</label>

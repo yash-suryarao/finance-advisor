@@ -30,6 +30,17 @@ from notifications.models import Notification
 from .serializers import BudgetInsightSerializer
 import pandas as pd
 
+# Optional ML library imports (guarded so server starts even if not installed)
+try:
+    from prophet import Prophet
+except ImportError:
+    Prophet = None
+
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+
 # ==========================================
 # 1. AI & FORECASTING INSIGHTS
 # These endpoints handle Machine Learning and Gemini LLM features
@@ -394,6 +405,309 @@ def get_budget_trajectory(request):
         'predicted': predicted,
         'budget_limit': total_budget,
     }, status=status.HTTP_200_OK)
+
+
+# ==========================================
+# AI BUDGET ADVISORY FEATURES
+# Feature 1: AI Budget Suggestions (AI Suggest All button)
+# Feature 2: AI Budget Planner (Zero-Based Auto-Planner modal)
+# Feature 3: Overspending Predictions (Per-budget badge)
+# ==========================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ai_budget_suggestions(request):
+    """
+    Feature 1 — AI Suggest All Budgets.
+    Calls suggest_smart_budgets() (XGBoost-based heuristic) plus actual
+    3-month category averages to produce a clean list of AI-recommended
+    monthly limits. The user can apply them one-by-one or all at once.
+
+    Returns: [{category, suggested_limit, current_avg_spend, reason}]
+    """
+    from insights.utils import get_user_transactions_df, suggest_smart_budgets
+    user = request.user
+    today = datetime.today()
+
+    # ------- 1. Calculate 3-month average spend per expense category -------
+    three_months_ago = today.replace(day=1) - timedelta(days=1)
+    three_months_ago = three_months_ago.replace(day=1) - timedelta(days=60)
+
+    raw_qs = (
+        Transaction.objects.filter(
+            user=user,
+            category_type='expense',
+            date__gte=three_months_ago
+        )
+        .values('category__name')
+        .annotate(total=Sum('amount'))
+    )
+    avg_spend = {
+        item['category__name']: round(float(item['total']) / 3, 2)
+        for item in raw_qs
+        if item['category__name']
+    }
+
+    if not avg_spend:
+        return Response({'suggestions': [], 'message': 'Not enough transaction history to generate suggestions. Add at least 1 month of expenses.'})
+
+    # ------- 2. Get XGBoost/heuristic suggestions as a map -------
+    xgb_suggestions = suggest_smart_budgets(user)
+    xgb_map = {s['category']: s for s in xgb_suggestions}
+
+    # ------- 3. Build response -------
+    suggestions = []
+    for cat, avg in sorted(avg_spend.items(), key=lambda x: -x[1]):
+        current_budget = TransactionsBudget.objects.filter(user=user, category=cat).first()
+
+        # Suggest 90% of 3-month avg (10% saving target), clamp to a min of ₹100
+        suggested = max(round(avg * 0.90, 0), 100)
+
+        # If XGBoost flags this as a high-risk category, go 15% below avg
+        if cat in xgb_map:
+            suggested = max(round(avg * 0.85, 0), 100)
+            reason = f"XGBoost flagged {cat} as high-spend ({round(float(xgb_map[cat].get('data_point', 0) / avg * 100) if avg else 0, 1)}% of your total). A 15% reduction target is suggested."
+        else:
+            reason = f"Based on your ₹{avg:,.0f}/month average in {cat} over the last 3 months. A 10% savings target keeps you comfortable."
+
+        suggestions.append({
+            'category': cat,
+            'suggested_limit': suggested,
+            'current_avg_spend': avg,
+            'current_limit': float(current_budget.monthly_limit) if current_budget else None,
+            'reason': reason,
+        })
+
+    return Response({'suggestions': suggestions}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def ai_budget_planner(request):
+    """
+    Feature 2 — AI Zero-Based Budget Auto-Planner.
+    Takes `monthly_income` from request body.
+    Applies the 50/30/20 rule weighted by user's real historical spending
+    ratios per category, then calls Gemini to generate a human-readable
+    explanation for the full plan.
+
+    Returns: {allocations: [{category, amount, bucket, pct}], summary: str, total: float}
+    """
+    from insights.utils import get_user_transactions_df
+    from django.conf import settings
+
+    user = request.user
+    monthly_income = float(request.data.get('monthly_income', 0))
+    if monthly_income <= 0:
+        return Response({'error': 'Please provide a valid monthly income amount.'}, status=400)
+
+    # ------- 1. Get last 3 months of expense data -------
+    today = datetime.today()
+    three_months_ago = today.replace(day=1) - timedelta(days=90)
+
+    raw_qs = (
+        Transaction.objects.filter(
+            user=user,
+            category_type='expense',
+            date__gte=three_months_ago
+        )
+        .values('category__name')
+        .annotate(total=Sum('amount'))
+    )
+    cat_totals = {
+        item['category__name']: float(item['total'])
+        for item in raw_qs
+        if item['category__name']
+    }
+
+    if not cat_totals:
+        return Response({'error': 'No expense history found. Please add some transactions first.'}, status=400)
+
+    # ------- 2. Classify each category into 50/30/20 buckets -------
+    NEEDS = {'Rent & Housing', 'Bills & Utilities', 'Food & Dining', 'Health & Medical',
+             'EMI & Loans', 'Transport', 'Education', 'Personal Care'}
+    SAVINGS = {'Investments', 'Savings', 'Emergency Fund'}
+
+    total_hist = sum(cat_totals.values())
+    needs_hist = sum(v for k, v in cat_totals.items() if k in NEEDS)
+    wants_hist = sum(v for k, v in cat_totals.items() if k not in NEEDS and k not in SAVINGS)
+    savings_hist = sum(v for k, v in cat_totals.items() if k in SAVINGS)
+
+    # Target allocations (50/30/20)
+    target_needs = monthly_income * 0.50
+    target_wants = monthly_income * 0.30
+    target_savings = monthly_income * 0.20
+
+    # Scale each category proportionally within its bucket
+    allocations = []
+    for cat, hist_amt in sorted(cat_totals.items(), key=lambda x: -x[1]):
+        if cat in NEEDS:
+            bucket = 'Need'
+            bucket_target = target_needs
+            bucket_hist = needs_hist if needs_hist > 0 else 1
+            color = 'blue'
+        elif cat in SAVINGS:
+            bucket = 'Savings'
+            bucket_target = target_savings
+            bucket_hist = savings_hist if savings_hist > 0 else 1
+            color = 'green'
+        else:
+            bucket = 'Want'
+            bucket_target = target_wants
+            bucket_hist = wants_hist if wants_hist > 0 else 1
+            color = 'purple'
+
+        # Proportional allocation within the bucket
+        allocated = round((hist_amt / bucket_hist) * bucket_target, 0)
+        pct = round((allocated / monthly_income) * 100, 1)
+
+        allocations.append({
+            'category': cat,
+            'amount': allocated,
+            'bucket': bucket,
+            'color': color,
+            'pct': pct,
+        })
+
+    # Add a Savings/Investment row if user has no SAVINGS category
+    savings_allocated = sum(a['amount'] for a in allocations if a['bucket'] == 'Savings')
+    if savings_allocated == 0:
+        allocations.append({
+            'category': 'Investments',
+            'amount': round(target_savings, 0),
+            'bucket': 'Savings',
+            'color': 'green',
+            'pct': 20.0,
+        })
+
+    total_allocated = sum(a['amount'] for a in allocations)
+
+    # ------- 3. Gemini summary -------
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    summary = f"Your ₹{monthly_income:,.0f} income has been split using the 50/30/20 rule, adjusted for your real spending patterns."
+    try:
+        if api_key and genai:
+            import google.generativeai as genai_local
+            genai_local.configure(api_key=api_key)
+            model = genai_local.GenerativeModel('gemini-2.0-flash')
+            prompt = f"""
+You are a personal finance advisor. A user with ₹{monthly_income:,.0f} monthly income wants a budget plan.
+Their historical spending: {cat_totals}
+Using the 50/30/20 rule adjusted for their history, here are the allocations: {allocations}
+Write a 2-sentence friendly explanation of this budget plan. Be specific, mention their top 2 categories.
+Keep it under 50 words. Do NOT use markdown.
+"""
+            resp = model.generate_content(prompt)
+            summary = resp.text.strip()
+    except Exception:
+        pass
+
+    return Response({
+        'allocations': allocations,
+        'summary': summary,
+        'total_allocated': total_allocated,
+        'monthly_income': monthly_income,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def overspend_predictions(request):
+    """
+    Feature 3 — Overspending Predictions per budget.
+    For each active budget, uses Prophet (with linear extrapolation fallback)
+    to predict whether the user will exceed their monthly limit by month-end.
+
+    Returns: [{category, limit, actual_spent, predicted_eom, will_exceed,
+               overspend_amount, risk_level, days_remaining}]
+    """
+    user = request.user
+    today = datetime.today()
+    current_month = today.month
+    current_year = today.year
+    days_elapsed = max(today.day, 1)
+
+    import calendar
+    total_days = calendar.monthrange(current_year, current_month)[1]
+    days_remaining = total_days - days_elapsed
+
+    budgets = TransactionsBudget.objects.filter(user=user)
+    if not budgets.exists():
+        return Response([], status=status.HTTP_200_OK)
+
+    # Get this month's actual spend per category
+    daily_qs = (
+        Transaction.objects.filter(
+            user=user,
+            category_type='expense',
+            date__year=current_year,
+            date__month=current_month
+        )
+        .values('category__name')
+        .annotate(total=Sum('amount'))
+    )
+    actual_spend = {item['category__name']: float(item['total']) for item in daily_qs}
+
+    predictions = []
+    for budget in budgets:
+        cat = budget.category
+        limit = float(budget.monthly_limit)
+        spent = actual_spend.get(cat, 0.0)
+
+        # Linear extrapolation: daily burn rate × remaining days
+        daily_rate = spent / days_elapsed if days_elapsed > 0 else 0
+        predicted_eom = round(spent + (daily_rate * days_remaining), 2)
+
+        # Try Prophet for more accurate prediction (only if enough history)
+        try:
+            from insights.utils import get_user_transactions_df
+            df = get_user_transactions_df(user)
+            if not df.empty and Prophet is not None:
+                cat_df = df[df['category'] == cat].copy()
+                if len(cat_df) >= 10:
+                    daily_cat = cat_df.groupby(cat_df['date'].dt.date)['amount'].sum().reset_index()
+                    daily_cat.columns = ['ds', 'y']
+                    daily_cat['ds'] = pd.to_datetime(daily_cat['ds'])
+                    m = Prophet(daily_seasonality=False, weekly_seasonality=True, yearly_seasonality=False)
+                    m.fit(daily_cat)
+                    future = m.make_future_dataframe(periods=days_remaining + 1)
+                    forecast = m.predict(future)
+                    remaining_forecast = forecast.tail(days_remaining)['yhat'].clip(lower=0).sum()
+                    predicted_eom = round(spent + float(remaining_forecast), 2)
+        except Exception:
+            pass  # Stick with linear extrapolation
+
+        will_exceed = predicted_eom > limit
+        overspend_amt = round(predicted_eom - limit, 2) if will_exceed else 0.0
+        pct_predicted = round((predicted_eom / limit) * 100, 1) if limit > 0 else 0
+
+        # Risk levels: safe / warning / danger / exceeded
+        if spent >= limit:
+            risk_level = 'exceeded'
+        elif pct_predicted >= 100:
+            risk_level = 'danger'
+        elif pct_predicted >= 80:
+            risk_level = 'warning'
+        else:
+            risk_level = 'safe'
+
+        predictions.append({
+            'category': cat,
+            'limit': limit,
+            'actual_spent': spent,
+            'predicted_eom': predicted_eom,
+            'pct_predicted': pct_predicted,
+            'will_exceed': will_exceed,
+            'overspend_amount': overspend_amt,
+            'risk_level': risk_level,
+            'days_remaining': days_remaining,
+        })
+
+    # Sort: most at-risk first
+    risk_order = {'exceeded': 0, 'danger': 1, 'warning': 2, 'safe': 3}
+    predictions.sort(key=lambda x: risk_order.get(x['risk_level'], 4))
+
+    return Response(predictions, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])

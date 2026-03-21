@@ -24,6 +24,11 @@ urlpatterns = [
     path('spending-trends/', views.get_spending_trends, name='spending-trends'),
     path('budget-trajectory/', views.get_budget_trajectory, name='budget-trajectory'),
 
+    # AI Budget Advisory Features
+    path('ai-budget-suggestions/', views.ai_budget_suggestions, name='ai-budget-suggestions'),
+    path('ai-budget-planner/', views.ai_budget_planner, name='ai-budget-planner'),
+    path('overspend-predictions/', views.overspend_predictions, name='overspend-predictions'),
+
     # ==========================================
     # 3. NOTIFICATIONS & 4. SAVINGS GOALS
     # ==========================================

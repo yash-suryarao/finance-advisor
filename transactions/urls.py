@@ -10,7 +10,7 @@ from .views import (
     get_transactions, TransactionListCreateView, TransactionDetailView, CategoryListView,
     categorize_description
 )
-from .views import BudgetView, BudgetHistoryView
+from .views import BudgetView, BudgetHistoryView, BudgetDeleteView
 
 urlpatterns = [
     # ==========================================
@@ -32,6 +32,7 @@ urlpatterns = [
     # Endpoints to manage active budgets and view past performance.
     # ==========================================
     path('budget/', BudgetView.as_view(), name='budget'),
+    path('budget/<int:pk>/delete/', BudgetDeleteView.as_view(), name='budget-delete'),
     path('budget-history/', BudgetHistoryView.as_view(), name='budget-history'),
 
     # ==========================================

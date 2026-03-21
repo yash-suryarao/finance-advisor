@@ -173,14 +173,76 @@ class CategoryListView(generics.ListAPIView):
 
 # View for fetching and creating budgets
 class BudgetView(generics.ListCreateAPIView):
+    """
+    GET: Returns all budgets for the user, including this month's actual spending
+         per category so the frontend can draw accurate progress bars.
+    POST: Creates a new budget. If a budget for that category already exists,
+          updates its limit instead of creating a duplicate.
+    """
     serializer_class = BudgetSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Budget.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        from django.utils.timezone import now
+        from django.db.models import Sum
+        user = request.user
+        today = now()
+
+        # Aggregate actual spending per category for the current month
+        monthly_spent = {
+            item['category__name']: float(item['total'])
+            for item in Transaction.objects.filter(
+                user=user,
+                category_type='expense',
+                date__year=today.year,
+                date__month=today.month
+            ).values('category__name').annotate(total=Sum('amount'))
+        }
+
+        budgets = self.get_queryset()
+        result = []
+        for budget in budgets:
+            cat_name = budget.category
+            result.append({
+                'id': budget.id,
+                'category': cat_name,
+                'monthly_limit': float(budget.monthly_limit),
+                'actual_spent': monthly_spent.get(cat_name, 0.0),
+                'created_at': budget.created_at.strftime('%d %b %Y'),
+            })
+        return Response(result)
+
+    def perform_create(self, serializer):
+        # Upsert: update monthly_limit if category already has a budget
+        category = self.request.data.get('category')
+        amount = self.request.data.get('monthly_limit')
+        budget, created = Budget.objects.get_or_create(
+            user=self.request.user, category=category,
+            defaults={'monthly_limit': amount}
+        )
+        if not created:
+            budget.monthly_limit = amount
+            budget.save()
+
+
+class BudgetDeleteView(generics.DestroyAPIView):
+    """DELETE a specific budget by pk for the authenticated user."""
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Budget.objects.filter(user=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response({'message': 'Budget deleted.'}, status=status.HTTP_200_OK)
+
 
 class BudgetHistoryView(generics.ListAPIView):
+    """Returns budget performance history for a given month/year."""
     serializer_class = BudgetHistorySerializer
     permission_classes = [IsAuthenticated]
 
