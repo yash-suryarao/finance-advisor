@@ -49,39 +49,6 @@ CREATE TABLE budgets (
 CREATE INDEX idx_budgets_user_id ON budgets(user_id);
 CREATE INDEX idx_budgets_category_id ON budgets(category_id);
 
-CREATE TABLE groups (
-    group_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    created_by UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_groups_created_by ON groups(created_by);
-
-CREATE TABLE group_members (
-    group_member_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    group_id UUID NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_group_members_group_id ON group_members(group_id);
-CREATE INDEX idx_group_members_user_id ON group_members(user_id);
-
-CREATE TABLE group_expenses (
-    group_expense_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    group_id UUID NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE,
-    payer_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    amount NUMERIC(15, 2) NOT NULL,
-    description TEXT,
-    category VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_group_expenses_group_id ON group_expenses(group_id);
-CREATE INDEX idx_group_expenses_payer_id ON group_expenses(payer_id);
 
 CREATE TABLE insights (
     insight_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -195,3 +162,38 @@ BEGIN
         ', table_name);
     END LOOP;
 END $$;
+
+
+-- CREATE TABLE groups (
+--     group_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     name VARCHAR(255) NOT NULL,
+--     description TEXT,
+--     created_by UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+--     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- CREATE INDEX idx_groups_created_by ON groups(created_by);
+
+-- CREATE TABLE group_members (
+--     group_member_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     group_id UUID NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE,
+--     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+--     joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- CREATE INDEX idx_group_members_group_id ON group_members(group_id);
+-- CREATE INDEX idx_group_members_user_id ON group_members(user_id);
+
+-- CREATE TABLE group_expenses (
+--     group_expense_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     group_id UUID NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE,
+--     payer_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+--     amount NUMERIC(15, 2) NOT NULL,
+--     description TEXT,
+--     category VARCHAR(255),
+--     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- );
+
+-- CREATE INDEX idx_group_expenses_group_id ON group_expenses(group_id);
+-- CREATE INDEX idx_group_expenses_payer_id ON group_expenses(payer_id);

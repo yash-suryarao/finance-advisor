@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 
 <head>
     <meta charset="UTF-8">
@@ -124,7 +124,7 @@
             </div>
 
             <!-- ── Transaction History ── -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div id="transaction-history" class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-base font-semibold text-gray-900">Transaction History</h2>
                     <span id="activeCategoryFilter"
@@ -152,6 +152,7 @@
                             </tr>
                         </thead>
                         <tbody id="transactionsList" class="divide-y divide-gray-50"></tbody>
+
                     </table>
                 </div>
             </div>
@@ -213,8 +214,7 @@
 
     </div>
 
-    <!-- Include Transaction JS -->
-    <script src="{% static 'frontend/js/transaction.js' %}?v=2.0"></script>
+    <script src="{% static 'frontend/js/transaction.js' %}?v=2.1"></script>
     <!-- Include Global Nav JS -->
     <script src="{% static 'frontend/js/nav.js' %}?v=1.1"></script>
 

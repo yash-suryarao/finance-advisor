@@ -10,15 +10,15 @@ def check_budget_alert(user):
     budgets = Budget.objects.filter(user=user)
     for budget in budgets:
         spent = Transaction.objects.filter(
-            user=user, category=budget.category, category_type='expense'
+            user=user, category__name=budget.category, category_type='expense'
         ).aggregate(Sum('amount'))['amount__sum'] or 0
         
-        usage_percentage = (spent / budget.monthly_limit) * 100 if budget.monthly_limit > 0 else 0
+        usage_percentage = (spent / float(budget.monthly_limit)) * 100 if budget.monthly_limit > 0 else 0
         
         if usage_percentage >= 80:
             alerts.objects.create(
                 user=user,
-                message=f"You have used {usage_percentage:.2f}% of your budget for {budget.category.name}. Consider reviewing your spending."
+                message=f"You have used {usage_percentage:.2f}% of your budget for {budget.category}. Consider reviewing your spending."
             )
 
 

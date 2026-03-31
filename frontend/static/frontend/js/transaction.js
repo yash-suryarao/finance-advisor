@@ -24,10 +24,22 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("transactionForm").addEventListener("submit", submitTransaction);
     document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
     setPeriod('month');
+
+    // Smooth scroll if coming from Dashboard's "View All" link
+    if (window.location.hash === '#transaction-history') {
+        setTimeout(() => {
+            const target = document.getElementById('transaction-history');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 300); // Wait for data fetch & render to settle
+    }
 });
 
 function closeAddModal() {
     document.getElementById("addTransactionModal").classList.add("hidden");
+    const form = document.getElementById("transactionForm");
+    if (form) form.reset();
 }
 
 // ── Period selector ───────────────────────────────
@@ -371,7 +383,7 @@ function renderTransactions(transactions) {
         return;
     }
     tbody.innerHTML = transactions.map(t => `
-        <tr class="border-b">
+        <tr class="hover:bg-gray-50 transition group">
             <td class="px-6 py-4 text-left">${t.date}</td>
             <td class="px-6 py-4 text-left">${t.category_name || 'Uncategorized'}</td>
             <td class="px-6 py-4 text-center">

@@ -27,6 +27,9 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ['id', 'date', 'category', 'category_type', 'category_name', 'amount', 'description', 'created_at', 'updated_at']
 
+    def get_category_name(self, obj):
+        return obj.category.name if obj.category else "Other"
+
 
 # ==========================================
 # 2. BUDGETING MODULE

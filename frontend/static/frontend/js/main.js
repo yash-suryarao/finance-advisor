@@ -206,8 +206,8 @@ async function fetchTransactions() {
         // Sort transactions to ensure the newest are at the top (LIFO/Stack) using precise creation timestamp
         const sortedTransactions = transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        // Restrict to max 6 transactions for the dashboard view
-        sortedTransactions.slice(0, 6).forEach(transaction => {
+        // Restrict to max 10 transactions for the dashboard view
+        sortedTransactions.slice(0, 10).forEach(transaction => {
             let iconClass = "ri-file-list-line text-gray-600";  // Default icon
             let bgClass = "bg-gray-100";
 

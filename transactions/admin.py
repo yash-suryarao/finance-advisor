@@ -5,7 +5,7 @@ from .models import Transaction, Category, Budget
 # Registering the Transaction model
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'amount', 'category', 'date', 'category_type')
+    list_display = ('user', 'date', 'amount', 'category', 'category_type', 'description')
     search_fields = ('user__username', 'category')
     list_filter = ('category_type', 'date')
 
@@ -20,7 +20,7 @@ class CategoryAdmin(admin.ModelAdmin):
 # Registering the Budget model
 @admin.register(Budget)
 class BudgetAdmin(admin.ModelAdmin):
-    list_display = ('user', 'category', 'monthly_limit', 'created_at')
+    list_display = ('user_id', 'user', 'category', 'monthly_limit', 'created_at')
     search_fields = ('user__username', 'category__name')
 
 from .models import DeletedTransaction

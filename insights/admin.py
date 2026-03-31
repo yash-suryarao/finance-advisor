@@ -3,6 +3,6 @@ from .models import SavingsGoal
 
 @admin.register(SavingsGoal)
 class SavingsGoalAdmin(admin.ModelAdmin):
-    list_display = ('user', 'goal_name', 'target_amount', 'saved_amount', 'deadline', 'status')
+    list_display = ('user_id', 'user', 'goal_name', 'target_amount', 'saved_amount', 'deadline', 'status')
     list_filter = ('status', 'deadline')
-    search_fields = ('goal_name', 'user__username')
+    search_fields = ('goal_name', 'user__username', 'user_id', 'status', 'deadline')

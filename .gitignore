@@ -1,6 +1,6 @@
 venv/
 
-# Environment variables - NEVER commit this
+# Environment variables
 .env
 .env.*
 
