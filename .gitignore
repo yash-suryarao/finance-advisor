@@ -5,6 +5,7 @@ venv/
 .env.*
 
 # Python cache
+__pycache__
 admin_dashboard/__pycache__/*
 insights/__pycache__/*
 users/__pycache__/*
