@@ -13,7 +13,7 @@ from transactions.models import Transaction
 
 try:
     # Load dataset
-    df_csv = pd.read_csv("transactions_dataset.csv")
+    df_csv = pd.read_csv("categories_dataset.csv")
 
     # Ensure correct column names
     if "Transaction" not in df_csv.columns or "Category" not in df_csv.columns:
