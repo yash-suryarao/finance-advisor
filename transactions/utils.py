@@ -13,7 +13,7 @@ def check_budget_alert(user):
             user=user, category__name=budget.category, category_type='expense'
         ).aggregate(Sum('amount'))['amount__sum'] or 0
         
-        usage_percentage = (spent / float(budget.monthly_limit)) * 100 if budget.monthly_limit > 0 else 0
+        usage_percentage = (float(spent) / float(budget.monthly_limit)) * 100 if budget.monthly_limit > 0 else 0
         
         if usage_percentage >= 80:
             alerts.objects.create(

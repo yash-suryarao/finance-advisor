@@ -75,3 +75,21 @@ a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,180.0,Food & Dining,Expense,Frui
 a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,100.0,Bills,Expense,
 a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,100.0,Bills,Expense,
 a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,1.0,Other,Expense,test
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,1.0,Bills,Expense,test1
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-25,1.0,Other,Expense,test transaction
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-03-31,2000.0,Bills,Expense,Electircity Bill
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,250.0,Food & Dining,Expense,Breakfast
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,399.0,Subscriptions,Expense,Netflix Monthly Subscription
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,9.99,Food,Expense,
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,500.0,Other Income,Income,From Friend
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,1.0,Other Income,Income,Test Income
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,1.0,Other,Expense,Test Expense
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,2.0,Other Income,Income,Test Income
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,3.0,Other,Expense,Test Expense bug
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,1.0,Bills,Expense,
+a3d7dadf-ef67-4bc5-94ce-47037397f3b6,2026-04-01,1.0,Other,Expense,test expense bug 2
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,50.0,Food,Expense,AI debugging
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,50.0,AlertTestCategory,Expense,Triggering alert
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,50.0,AlertTestCategory_2,Expense,Triggering alert
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,50.0,AlertTestCategory_3,Expense,Triggering alert
+30845456-bb25-4618-b8f8-cbf589039381,2026-04-01,50.0,AlertTestCategory_5,Expense,Triggering alert

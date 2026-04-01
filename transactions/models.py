@@ -102,3 +102,6 @@ class alerts(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.message}"
+
+# Force load signals to guarantee the post_save correctly registers
+import transactions.signals

@@ -13,21 +13,18 @@ def _trigger_export():
     try:
         export_all_transactions_to_csv()
     except Exception as e:
+        print(f"❌ ERROR in _trigger_export CSV write: {e}")
         import logging
         logging.getLogger(__name__).error(f"Failed to export consolidated CSV: {e}")
 
 def schedule_csv_export():
     """
     Schedules an asynchronous export of all transactions to a CSV file.
-    Uses a 15-second debounce so rapid successive saves don't overload the server.
+    Runs immediately to ensure the Insights ML models have up-to-date real-time data.
     """
-    global _export_timer
-    
-    if _export_timer is not None:
-        _export_timer.cancel()
-        
-    _export_timer = threading.Timer(_EXPORT_COOLDOWN_SECONDS, _trigger_export)
-    _export_timer.start()
+    print("🔔 SIGNAL FIRED: CSV Export starting...")
+    _trigger_export()
+    print("✅ CSV Export finished.")
 
 
 @receiver(post_save, sender=Transaction)
