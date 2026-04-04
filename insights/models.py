@@ -17,6 +17,29 @@ class BudgetInsight(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.category} Insights"
 
+class AIInsightsLog(models.Model):
+    OUTCOME_CHOICES = [
+        ('pending',   'Pending'),    # Not yet evaluated
+        ('improved',  'Improved'),   # Spending reduced after advice
+        ('worsened',  'Worsened'),   # Spending increased after advice
+        ('neutral',   'Neutral'),    # No significant change
+    ]
+
+    user              = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    feature_name      = models.CharField(max_length=100)
+    context_snapshot  = models.JSONField(blank=True, null=True)   # numbers fed to the AI
+    generated_insight = models.TextField()                         # what AI said
+    outcome_snapshot  = models.JSONField(blank=True, null=True)   # numbers 30 days later
+    outcome_label     = models.CharField(max_length=12, choices=OUTCOME_CHOICES, default='pending')
+    created_at        = models.DateTimeField(auto_now_add=True)
+    evaluated_at      = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.feature_name} ({self.created_at.strftime('%Y-%m-%d')}) [{self.outcome_label}]"
+
 # ==========================================
 # 2. SAVINGS & GOALS MODELS
 # ==========================================

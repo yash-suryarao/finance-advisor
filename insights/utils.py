@@ -183,36 +183,76 @@ def suggest_smart_budgets(user):
     """
     Model 3: XGBoost / Gradient Boosted Trees for Budget Reallocation.
     Evaluates profile against quantitative heuristics to shape optimal budgets.
+    
+    — Feedback Loop Integration:
+    Loads ai_training_feedback.csv (if it exists) and uses past outcome labels
+    as multipliers for the risk score, making recommendations progressively
+    smarter as more AIInsightsLog evaluations accumulate.
     """
     df = get_user_transactions_df(user)
     suggestions = []
-    
+
     if df.empty or xgb is None:
         return suggestions
-        
-    category_summary = df.groupby("category")["amount"].sum().reset_index()
-    
+
+    # ── Load feedback CSV for outcome-based risk weighting ────────────────────
+    feedback_weights = {}   # {category: weight_multiplier}
     try:
-        # In a fully productionized system, XGBoost would be trained on thousands of users' data
-        # to map (income, spending_history) -> (optimal_budget).
-        # We simulate the scoring mechanism:
+        import os
+        feedback_path = os.path.join(settings.BASE_DIR, 'media', 'datasets', 'ai_training_feedback.csv')
+        if os.path.exists(feedback_path):
+            fb_df = pd.read_csv(feedback_path)
+            # Filter to this user only
+            fb_df = fb_df[fb_df['user_id'].astype(str) == str(user.id)]
+            if not fb_df.empty:
+                for cat, group in fb_df.groupby('category'):
+                    outcomes = group['outcome_label'].value_counts()
+                    worsened = outcomes.get('worsened', 0)
+                    improved = outcomes.get('improved', 0)
+                    total    = len(group)
+                    # Higher worsened ratio → push harder (up to 1.5× cut)
+                    # Higher improved ratio → ease off (down to 0.75× cut)
+                    worsened_ratio = worsened / total if total > 0 else 0
+                    improved_ratio = improved / total if total > 0 else 0
+                    feedback_weights[cat] = 1.0 + (worsened_ratio * 0.5) - (improved_ratio * 0.25)
+    except Exception as e:
+        logger.warning(f"[Feedback Loop] Could not load training CSV: {e}")
+
+    category_summary = df.groupby("category")["amount"].sum().reset_index()
+
+    try:
         dtrain = xgb.DMatrix(category_summary[['amount']])
-        # Dummy prediction to represent model inference score processing
         category_summary['risk_score'] = category_summary['amount'] / category_summary['amount'].sum()
-        
+
         for _, row in category_summary.iterrows():
-            if row['risk_score'] > 0.3: # Using more than 30% of total spend
-                optimal_cut = row['amount'] * 0.15 # Suggest 15% cut
+            cat = row['category']
+            base_cut_rate = 0.15   # default 15% cut suggestion
+
+            # Apply outcome-based multiplier from feedback CSV
+            multiplier = feedback_weights.get(cat, 1.0)
+            adjusted_cut_rate = min(base_cut_rate * multiplier, 0.30)  # cap at 30%
+
+            if row['risk_score'] > 0.3:
+                optimal_cut = row['amount'] * adjusted_cut_rate
+                reason_suffix = ""
+                if multiplier > 1.1:
+                    reason_suffix = " Past AI advice was not followed — a stronger reduction is now recommended."
+                elif multiplier < 0.9:
+                    reason_suffix = " Your spending improved after last month's advice — keep it up!"
                 suggestions.append({
                     "type": "Budget",
-                    "title": f"Smart Budget Recommendation: {row['category']}",
-                    "description": f"You allocate a high volume ({row['risk_score']*100:.1f}%) of spending to {row['category']}. AI suggests reducing it by ₹{optimal_cut:.2f} this month.",
-                    "category": row['category'],
-                    "data_point": float(optimal_cut)
+                    "title": f"Smart Budget Recommendation: {cat}",
+                    "description": (
+                        f"You allocate a high volume ({row['risk_score']*100:.1f}%) of spending to {cat}. "
+                        f"AI suggests reducing it by ₹{optimal_cut:.2f} this month.{reason_suffix}"
+                    ),
+                    "category": cat,
+                    "data_point": float(optimal_cut),
+                    "feedback_multiplier": round(multiplier, 2),
                 })
     except Exception as e:
         logger.error(f"XGBoost scoring failed: {e}")
-        
+
     return suggestions
 
 
@@ -270,11 +310,53 @@ def generate_rule_based_insight(category_data):
     return "\n".join(lines)
 
 
-def generate_monthly_xai_report(user_data_summary):
+def generate_monthly_xai_report(user_data_summary, user=None):
     """
     Calls Gemini to generate the Explainable AI (XAI) Monthly Report.
     Returns a structured dict with what_happened, why_it_matters, and actionable recommendations.
+    Now uses AIInsightsLog to:
+    - Cache the result for 24 hours (avoids duplicate API calls)
+    - Inject prior advice into the prompt so the AI measures user improvement over time
     """
+    from insights.models import AIInsightsLog
+    from django.utils import timezone
+    from datetime import timedelta
+
+    feature_name = 'Monthly XAI Review'
+
+    # ── 1. Cache Check: return stored insight if < 24 hours old ──────────────
+    if user:
+        recent = AIInsightsLog.objects.filter(
+            user=user,
+            feature_name=feature_name,
+            created_at__gte=timezone.now() - timedelta(hours=24)
+        ).first()
+        if recent:
+            try:
+                return json.loads(recent.generated_insight)
+            except Exception:
+                pass  # fall through to regenerate
+
+    # ── 2. Load prior advice for Memory Injection ─────────────────────────────
+    prior_advice_text = ''
+    if user:
+        prior = AIInsightsLog.objects.filter(
+            user=user, feature_name=feature_name
+        ).order_by('-created_at').first()
+        if prior:
+            try:
+                prior_data = json.loads(prior.generated_insight)
+                prior_advice_text = f"""
+    IMPORTANT — MEMORY CONTEXT: You previously advised this user. Here is what you told them:
+    What Happened (prior): {prior_data.get('what_happened', '')}
+    Your Prior Recommendations: {json.dumps(prior_data.get('recommendations', []))}
+
+    Now compare their data then vs now and evaluate whether they followed your advice.
+    If they improved, acknowledge it. If they didn't, address it directly and firmly but constructively.
+    """
+            except Exception:
+                pass
+
     api_key = getattr(settings, 'GEMINI_API_KEY', None)
     if not api_key or not genai:
         return {
@@ -286,7 +368,7 @@ def generate_monthly_xai_report(user_data_summary):
     genai.configure(api_key=api_key)
     prompt = f"""
     You are an expert financial advisor AI. The user has requested a monthly review. Here is their data:
-    
+    {prior_advice_text}
     Current Month Income: ₹{user_data_summary.get('current_month_income', 0)}
     Current Month Expense: ₹{user_data_summary.get('current_month_spending', 0)}
     Previous Month Income: ₹{user_data_summary.get('previous_month_income', 0)}
@@ -297,7 +379,7 @@ def generate_monthly_xai_report(user_data_summary):
     Instructions:
     Return your response strictly as a JSON object with the following schema:
     {{
-      "what_happened": "A friendly 2-3 sentence summary of how they did this month compared to last month, highlighting the top spending category.",
+      "what_happened": "A 2-3 sentence summary. If you have prior context, reference whether the user improved since last time. Otherwise give a fresh read.",
       "why_it_matters": "A 2-3 sentence explanation of how their spending impacted their Financial Health score.",
       "recommendations": [
         {{
@@ -320,8 +402,19 @@ def generate_monthly_xai_report(user_data_summary):
             raw_text = raw_text[7:]
         if raw_text.endswith("```"):
             raw_text = raw_text[:-3]
-            
-        return json.loads(raw_text)
+
+        result = json.loads(raw_text)
+
+        # ── 3. Persist to AIInsightsLog ─────────────────────────────────────────
+        if user:
+            AIInsightsLog.objects.create(
+                user=user,
+                feature_name=feature_name,
+                context_snapshot=user_data_summary,
+                generated_insight=json.dumps(result)
+            )
+
+        return result
     except Exception as e:
         logger.error(f"XAI Monthly Report generation failed: {e}")
         return {
@@ -398,13 +491,48 @@ def extract_subscriptions(user):
         return []
 
 
-def generate_category_llm_insight(category_data):
+def generate_category_llm_insight(category_data, user=None):
     """
     Attempts to generate a Gemini AI insight. Falls back to rule-based summary
     immediately if rate-limited (no long waits).
+
+    Now uses AIInsightsLog to:
+    - Cache the result for 24 hours per category (avoids repeated API hits)
+    - Inject prior advice into the next prompt for accountability-driven self-improvement
     """
-    api_key = getattr(settings, 'GEMINI_API_KEY', None)
+    from insights.models import AIInsightsLog
+    from django.utils import timezone
+    from datetime import timedelta
+
     cat = category_data['category']
+    feature_name = f'Category Insight: {cat}'
+
+    # ── 1. Cache Check: return stored insight if < 24 hours old ──────────────
+    if user:
+        recent = AIInsightsLog.objects.filter(
+            user=user,
+            feature_name=feature_name,
+            created_at__gte=timezone.now() - timedelta(hours=24)
+        ).first()
+        if recent:
+            return recent.generated_insight
+
+    # ── 2. Load prior advice for Memory Injection ─────────────────────────────
+    prior_advice_text = ''
+    if user:
+        prior = AIInsightsLog.objects.filter(
+            user=user, feature_name=feature_name
+        ).order_by('-created_at').first()
+        if prior:
+            prior_advice_text = f"""
+**MEMORY CONTEXT — What you previously told this user about '{cat}':**
+{prior.generated_insight[:500]}...
+
+Now compare: did this user's spending improve since then? If yes, celebrate it.
+If no, reference the prior advice and push harder with a more direct recommendation this time.
+"""
+
+    api_key = getattr(settings, 'GEMINI_API_KEY', None)
     
     try:
         import google.generativeai as genai
@@ -413,13 +541,20 @@ def generate_category_llm_insight(category_data):
         genai_loaded = False
 
     if not genai_loaded or not api_key:
-        return generate_rule_based_insight(category_data)
+        result = generate_rule_based_insight(category_data)
+        if user:
+            AIInsightsLog.objects.create(
+                user=user, feature_name=feature_name,
+                context_snapshot=category_data, generated_insight=result
+            )
+        return result
         
     genai.configure(api_key=api_key)
     
     prompt = f"""
 You are a helpful financial AI assistant. Analyze the specific spending data for the user's '{cat}' category:
 
+{prior_advice_text}
 - Current Month Spend: \u20b9{category_data['current_month_spending']:.2f}
 - Previous Month Spend: \u20b9{category_data['previous_month_spending']:.2f}
 - Month-Over-Month Change: {category_data['percentage_change']}%
@@ -428,7 +563,7 @@ You are a helpful financial AI assistant. Analyze the specific spending data for
 - Suggested Budget Reduction: \u20b9{category_data['recommended_budget_limit']:.2f}
 
 Provide a focused, actionable 2-paragraph summary.
-1. Explain what these trends mean practically. Highlight if algorithms detected massive spikes.
+1. Explain what these trends mean practically. Reference prior advice if available.
 2. Provide concrete recommendations to optimize spending in '{cat}'. Keep it concise and encouraging.
 
 Format with Markdown bolding. Do not use raw JSON.
@@ -439,16 +574,35 @@ Format with Markdown bolding. Do not use raw JSON.
             prompt,
             generation_config=genai.types.GenerationConfig(temperature=0.7)
         )
-        return response.text
+        result = response.text
+
+        # ── 3. Persist to AIInsightsLog ─────────────────────────────────────────
+        if user:
+            AIInsightsLog.objects.create(
+                user=user,
+                feature_name=feature_name,
+                context_snapshot=category_data,
+                generated_insight=result
+            )
+
+        return result
     except Exception as e:
         err_str = str(e)
         # Fail-fast on rate limits — use rule-based fallback immediately
         if 'ResourceExhausted' in type(e).__name__ or '429' in err_str:
             print(f"[GEMINI] Rate limited for '{cat}'. Using rule-based fallback.")
-            return generate_rule_based_insight(category_data)
-        # Other errors
-        logger.error(f"Gemini error for '{cat}': {type(e).__name__}: {e}")
-        return generate_rule_based_insight(category_data)
+            result = generate_rule_based_insight(category_data)
+        else:
+            logger.error(f"Gemini error for '{cat}': {type(e).__name__}: {e}")
+            result = generate_rule_based_insight(category_data)
+
+        # Still save the fallback so we have a memory reference
+        if user:
+            AIInsightsLog.objects.create(
+                user=user, feature_name=feature_name,
+                context_snapshot=category_data, generated_insight=result
+            )
+        return result
 
 
 def get_advanced_ai_insights(user):

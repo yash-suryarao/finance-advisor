@@ -16,8 +16,10 @@ urlpatterns = [
     path('accept-suggested-budget/', accept_suggested_budget, name='accept-suggested-budget'),
     path('budget-insights/', BudgetInsightView.as_view(), name='budget-insights'),
     path('monthly-review/', views.monthly_xai_review, name='monthly-review'),
-    path('subscriptions/', views.get_subscriptions, name='get-subscriptions'),
     path('anomaly-heatmap/', views.get_anomaly_heatmap, name='anomaly-heatmap'),
+    path('wellness-analyzer/', views.wellness_analyzer, name='wellness-analyzer'),
+    path('category-burn-rate/', views.category_burn_rate, name='category-burn-rate'),
+    path('peer-benchmarking/', views.peer_benchmarking, name='peer-benchmarking'),
 
     # Analysis Page — Real Data Endpoints
     path('analysis-summary/', views.get_analysis_summary, name='analysis-summary'),

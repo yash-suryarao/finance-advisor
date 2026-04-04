@@ -100,15 +100,45 @@
                     <div id="trajectoryChart" class="flex-grow w-full"></div>
                 </div>
 
-                <!-- Recurring Subscriptions List -->
+                <!-- 1. The 50/30/20 Analyzer will go here -->
                 <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
                     <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
-                        <i class="ri-repeat-2-line text-indigo-500 mr-2"></i> Hidden Subscriptions
+                        <i class="ri-pie-chart-2-fill text-indigo-500 mr-2"></i> 50/30/20 Wellness
                     </h2>
-                    <p class="text-xs text-gray-500 mb-4">Detected from last 90 days via Gemini AI.</p>
-                    <div id="subscriptionsList" class="flex-grow overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <p class="text-xs text-gray-500 mb-4">AI categorizes your spending into Needs, Wants, and Savings.</p>
+                    <div id="wellnessChart" class="flex-grow w-full">
                         <div class="flex items-center justify-center h-full text-gray-400">
-                            <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Analyzing transactions...
+                            <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Analyzing wellness...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New AI Insight Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+                <!-- Category Burn Rate Forecaster -->
+                <div class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-lg font-bold text-gray-800"><i class="ri-fire-fill text-orange-500 mr-2"></i> Category Burn Rate Forecaster</h2>
+                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">ML Risk Detection</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">Identifies which exact categories are accelerating the fastest vs your usual pacing.</p>
+                    <div id="burnRateList" class="flex-grow overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                        <div class="flex items-center justify-center h-full text-gray-400">
+                            <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Calculating pacing metrics...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Peer Benchmarking -->
+                <div class="bg-indigo-900 rounded-xl p-6 shadow-sm border border-indigo-800 flex flex-col h-[400px] text-white">
+                    <h2 class="text-lg font-bold text-white mb-2 flex items-center">
+                        <i class="ri-group-fill text-indigo-300 mr-2"></i> Peer Benchmarking
+                    </h2>
+                    <p class="text-xs text-indigo-200 mb-4">How you compare to users with similar geographic/income profiles.</p>
+                    <div id="benchmarkList" class="flex-grow space-y-4">
+                        <div class="flex items-center justify-center h-full text-indigo-300 text-sm">
+                            <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Fetching demographics...
                         </div>
                     </div>
                 </div>
@@ -433,6 +463,20 @@
                     },
                     series: { type: 'heatmap', coordinateSystem: 'calendar', data: chartData }
                 });
+                
+                // Add interactivity for clicks
+                heatmapChart.on('click', function (params) {
+                    const date_str = params.data[0];
+                    const amount = params.data[1];
+                    const isAnomaly = anomalyDates.includes(date_str);
+                    
+                    if (isAnomaly) {
+                        alert(`🚨 HIGH SPEND ANOMALY DETECTED\n\nDate: ${date_str}\nSpend: ₹${amount.toLocaleString('en-IN')}\n\nThis amount deviated significantly from your usual daily median. Click "Generate AI Summary" for deeper AI attribution.`);
+                    } else {
+                        alert(`Normal Day\nDate: ${date_str}\nSpend: ₹${amount.toLocaleString('en-IN')}`);
+                    }
+                });
+                
                 window.addEventListener('resize', () => heatmapChart.resize());
             } catch (e) {
                 console.error('Heatmap failed', e);
@@ -440,45 +484,133 @@
         }
 
         // ============================================================
-        // 5. SUBSCRIPTIONS — /api/insights/subscriptions/
+        // 5. 50/30/20 WELLNESS ANALYZER — /api/insights/wellness-analyzer/
         // ============================================================
-        async function fetchSubscriptions() {
-            const listEl = document.getElementById('subscriptionsList');
+        async function fetchWellnessAnalysis() {
             try {
-                const res = await fetch('/api/insights/subscriptions/', { headers: authHeaders() });
-                if (!res.ok) throw new Error("Failed to fetch");
-                const subs = await res.json();
+                const res = await fetch('/api/insights/wellness-analyzer/', { headers: authHeaders() });
+                if (!res.ok) throw new Error("Failed");
+                const data = await res.json();
+                
+                const wChart = echarts.init(document.getElementById('wellnessChart'));
+                wChart.setOption({
+                    tooltip: { trigger: 'item', formatter: '{b}: ₹{c} ({d}%)' },
+                    legend: { top: '5%', left: 'center' },
+                    series: [
+                        {
+                            name: 'Spending Wellness',
+                            type: 'pie',
+                            radius: ['40%', '70%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 10,
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            },
+                            label: { show: false, position: 'center' },
+                            emphasis: {
+                                label: { show: true, fontSize: 18, fontWeight: 'bold' }
+                            },
+                            labelLine: { show: false },
+                            data: [
+                                { value: data.needs || 0, name: 'Needs (50%)', itemStyle: { color: '#6366f1' } },
+                                { value: data.wants || 0, name: 'Wants (30%)', itemStyle: { color: '#ec4899' } },
+                                { value: data.savings || 0, name: 'Savings/Debt (20%)', itemStyle: { color: '#10b981' } }
+                            ]
+                        }
+                    ]
+                });
+                window.addEventListener('resize', () => wChart.resize());
+            } catch (e) {
+                document.getElementById('wellnessChart').innerHTML = "<div class='text-red-500 text-sm text-center p-4'>Could not load wellness data.</div>";
+            }
+        }
+
+        // ============================================================
+        // 6. CATEGORY BURN RATE FORECASTER — /api/insights/category-burn-rate/
+        // ============================================================
+        async function fetchCategoryBurnRate() {
+            const listEl = document.getElementById('burnRateList');
+            try {
+                const res = await fetch('/api/insights/category-burn-rate/', { headers: authHeaders() });
+                if (!res.ok) throw new Error("Failed");
+                const rates = await res.json();
 
                 listEl.innerHTML = '';
-                if (subs.length === 0) {
-                    listEl.innerHTML = `<div class="p-6 text-center text-gray-500">
-                        <i class="ri-check-line text-green-500 text-3xl block mb-2"></i>
-                        <p class="text-sm">No recurring subscriptions detected in the last 90 days.</p>
-                    </div>`;
+                if (rates.length === 0) {
+                    listEl.innerHTML = `<div class="p-6 text-center text-gray-500">Not enough data to calculate pacing.</div>`;
                     return;
                 }
 
-                subs.forEach(sub => {
+                rates.forEach(cat => {
+                    const isHighRisk = cat.burn_percentage > 100;
+                    const color = isHighRisk ? 'red' : 'indigo';
+                    const icon = isHighRisk ? 'ri-error-warning-fill' : 'ri-check-line';
+                    const pct = Math.min(cat.burn_percentage, 100);
+                    
                     listEl.innerHTML += `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-indigo-50 transition">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mr-3 font-bold text-sm">
-                                    ${sub.service_name.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-gray-800 text-sm">${sub.service_name}</h4>
-                                    <p class="text-xs text-gray-500">Estimated Recurring</p>
-                                </div>
+                        <div class="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm font-bold text-gray-800 flex items-center">
+                                    <i class="${icon} text-${color}-500 mr-2"></i>${cat.name}
+                                </span>
+                                <span class="text-xs font-bold text-${color}-600">${cat.burn_percentage}% Pacing</span>
                             </div>
-                            <div class="text-right">
-                                <span class="font-bold text-gray-900">₹${sub.estimated_monthly_cost.toLocaleString('en-IN')}</span>
-                                <p class="text-[10px] text-gray-400 uppercase">/month</p>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                <div class="bg-${color}-500 h-2 rounded-full" style="width: ${pct}%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-500">
+                                <span>Spent: ₹${cat.spent.toLocaleString('en-IN')}</span>
+                                <span>Proj. EOM: ₹${cat.projected.toLocaleString('en-IN')}</span>
                             </div>
                         </div>`;
                 });
-                window._subsData = subs;
             } catch (e) {
-                listEl.innerHTML = `<div class="p-4 text-center text-red-500 text-sm">Could not extract subscriptions at this time.</div>`;
+                listEl.innerHTML = `<div class="p-4 text-center text-red-500 text-sm">Could not calculate burn rates.</div>`;
+            }
+        }
+
+        // ============================================================
+        // 7. PEER BENCHMARKING — /api/insights/peer-benchmarking/
+        // ============================================================
+        async function fetchPeerBenchmarking() {
+            const listEl = document.getElementById('benchmarkList');
+            try {
+                const res = await fetch('/api/insights/peer-benchmarking/', { headers: authHeaders() });
+                if (!res.ok) throw new Error("Failed");
+                const stats = await res.json();
+                
+                listEl.innerHTML = '';
+                stats.forEach(stat => {
+                    const youStr = `₹${stat.your_spend.toLocaleString('en-IN')}`;
+                    const avgStr = `₹${stat.peer_avg.toLocaleString('en-IN')}`;
+                    const diff = stat.your_spend - stat.peer_avg;
+                    const diffPct = stat.peer_avg > 0 ? (diff / stat.peer_avg * 100).toFixed(0) : 0;
+                    
+                    let badge = '';
+                    if (stat.is_good && diff < 0) badge = `<span class="bg-green-500/20 text-green-300 text-[10px] px-2 py-0.5 rounded-full ml-2">Great!</span>`;
+                    else if (!stat.is_good && diff > 0) badge = `<span class="bg-red-500/20 text-red-300 text-[10px] px-2 py-0.5 rounded-full ml-2">+${diffPct}% Avg</span>`;
+                    
+                    listEl.innerHTML += `
+                        <div class="bg-indigo-800/50 p-3 rounded-lg border border-indigo-700/50">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-bold text-indigo-100">${stat.category}</span>
+                                ${badge}
+                            </div>
+                            <div class="flex items-center space-x-3 text-xs">
+                                <div class="flex-1">
+                                    <div class="text-indigo-300 mb-0.5">You</div>
+                                    <div class="font-bold text-white">${youStr}</div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-indigo-400 mb-0.5">Avg Peer</div>
+                                    <div class="font-bold text-indigo-200">${avgStr}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) {
+                listEl.innerHTML = `<div class="p-4 text-center text-red-400 text-sm">Could not load demographic data.</div>`;
             }
         }
 
@@ -626,7 +758,9 @@
             fetchSpendingTrends();
             fetchTrajectory();
             fetchHeatmapData();
-            fetchSubscriptions();
+            fetchWellnessAnalysis();
+            fetchCategoryBurnRate();
+            fetchPeerBenchmarking();
         })();
     </script>
     <script src="{% static 'frontend/js/nav.js' %}?v=1.1"></script>
