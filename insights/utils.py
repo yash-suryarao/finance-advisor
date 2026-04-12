@@ -21,6 +21,7 @@ import logging
 import warnings
 import json
 import random
+import re
 
 warnings.filterwarnings("ignore")
 
@@ -278,31 +279,31 @@ def generate_rule_based_insight(category_data):
 
     # Trend paragraph
     if prev == 0 and curr > 0:
-        lines.append(f"This is the **first recorded month** of spending in **{cat}**, totalling **\u20b9{curr:.2f}**.")
+        lines.append(f"This is the **first recorded month** of spending in **{cat}**, totalling **₹{curr:.2f}**.")
     elif pct > 20:
-        lines.append(f"Your **{cat}** spending has risen sharply by **{pct:.1f}%** this month (\u20b9{curr:.2f} vs \u20b9{prev:.2f} last month). This is a significant increase that warrants attention.")
+        lines.append(f"Your **{cat}** spending has risen sharply by **{pct:.1f}%** this month (₹{curr:.2f} vs ₹{prev:.2f} last month). This is a significant increase that warrants attention.")
     elif pct > 0:
-        lines.append(f"Your **{cat}** spending increased by **{pct:.1f}%** this month to **\u20b9{curr:.2f}** (up from \u20b9{prev:.2f}).")
+        lines.append(f"Your **{cat}** spending increased by **{pct:.1f}%** this month to **₹{curr:.2f}** (up from ₹{prev:.2f}).")
     elif pct < -10:
-        lines.append(f"Great progress! Your **{cat}** spending dropped by **{abs(pct):.1f}%** this month to **\u20b9{curr:.2f}** (down from \u20b9{prev:.2f}). Keep it up!")
+        lines.append(f"Great progress! Your **{cat}** spending dropped by **{abs(pct):.1f}%** this month to **₹{curr:.2f}** (down from ₹{prev:.2f}). Keep it up!")
     else:
-        lines.append(f"Your **{cat}** spending is relatively stable at **\u20b9{curr:.2f}** this month (\u20b9{prev:.2f} last month).")
+        lines.append(f"Your **{cat}** spending is relatively stable at **₹{curr:.2f}** this month (₹{prev:.2f} last month).")
 
     if anomaly:
-        lines.append(f"\n\u26a0\ufe0f **Anomaly detected:** {anomaly_detail}")
+        lines.append(f"\n⚠️ **Anomaly detected:** {anomaly_detail}")
 
     if forecast > 0:
-        lines.append(f"\n**Forecast:** Based on your spending patterns, the model projects approximately **\u20b9{forecast:.2f}** in {cat} spending over the next 30 days.")
+        lines.append(f"\n**Forecast:** Based on your spending patterns, the model projects approximately **₹{forecast:.2f}** in {cat} spending over the next 30 days.")
 
     # Recommendation paragraph
     lines.append("\n**Recommendations:**")
     if budget_cut > 0:
-        lines.append(f"- AI suggests targeting a **\u20b9{budget_cut:.2f}** reduction this month to bring your {cat} spending within a healthy range.")
+        lines.append(f"- AI suggests targeting a **₹{budget_cut:.2f}** reduction this month to bring your {cat} spending within a healthy range.")
     if pct > 20:
         lines.append(f"- Review recent {cat} transactions for any one-time large expenses that inflated this month's total.")
         lines.append(f"- Set a specific monthly budget limit for {cat} to track and control future spending.")
     elif pct < -10:
-        lines.append(f"- Maintain this discipline! Consider saving the **\u20b9{prev - curr:.2f}** saved compared to last month.")
+        lines.append(f"- Maintain this discipline! Consider saving the **₹{prev - curr:.2f}** saved compared to last month.")
     else:
         lines.append(f"- Track your {cat} spending weekly to identify opportunities to reduce costs further.")
         lines.append(f"- Compare prices and look for alternatives to lower recurring {cat} expenses.")
@@ -310,17 +311,120 @@ def generate_rule_based_insight(category_data):
     return "\n".join(lines)
 
 
+def generate_rule_based_monthly_report(user_data_summary):
+    """
+    Creates a detailed, statistical summary when the LLM is unavailable.
+    Expanded to be much more verbose and detailed across multiple paragraphs.
+    """
+    import json
+    curr_inc = user_data_summary.get('current_month_income', 0)
+    curr_exp = user_data_summary.get('current_month_spending', 0)
+    prev_exp = user_data_summary.get('previous_month_spending', 0)
+    health = user_data_summary.get('health_score', 0)
+    cats = user_data_summary.get('top_categories', [])
+    anomalies = user_data_summary.get('anomalies', [])
+    goal = user_data_summary.get('user_profile', {}).get('financial_goal', 'Savings')
+    occupation = user_data_summary.get('user_profile', {}).get('occupation', 'valued user')
+
+    # Calculate trend
+    diff = curr_exp - prev_exp
+    pct_change = (diff / prev_exp * 100) if prev_exp > 0 else 0
+    savings = curr_inc - curr_exp
+    spending_ratio = (curr_exp / curr_inc * 100) if curr_inc > 0 else 0
+    
+    # ── 1. Detailed "What Happened" Section ───────────────────────────────────
+    happened_parts = []
+    
+    # Paragraph 1: Overview
+    overview = f"Hello! Let's take a deep look at your finances for this month. You brought in a total income of ₹{curr_inc:,.2f} while your total expenditures reached ₹{curr_exp:,.2f}. "
+    if pct_change > 10:
+        overview += f"I noticed a notable upward trend in your spending, which has increased by **{pct_change:.1f}%** compared to last month. This shift suggests your current lifestyle or unforeseen expenses are putting additional pressure on your budget. "
+    elif pct_change < -10:
+        overview += f"Excellent work! Your total spending has decreased by **{abs(pct_change):.1f}%** since last month. This is a clear indicator that your recent adjustments are paying off. "
+    else:
+        overview += f"Your spending has remained remarkably stable, with only a **{abs(pct_change):.1f}%** change from last month. This consistency is great for long-term planning. "
+    happened_parts.append(overview)
+    
+    # Paragraph 2: Category Analysis
+    if cats:
+        cat_desc = f"Looking at where your money is going, the top three contributors to your expenses were **{', '.join(cats[:3])}**. "
+        cat_desc += f"Specifically, these categories highlight where the bulk of your ₹{curr_exp:,.2f} monthly spend is concentrated. For someone in your position as a **{occupation}**, managing these core areas is vital for maintaining balance. "
+        if len(cats) > 3:
+            cat_desc += f"Secondary expenses in {', '.join(cats[3:5])} also played a role in your monthly total."
+        happened_parts.append(cat_desc)
+        
+    # Paragraph 3: Behavioral Observations (Anomalies)
+    if anomalies:
+        anomaly_text = "I also detected some unusual activity this month. "
+        for a in anomalies[:2]:
+            anomaly_text += f"{a['description']} "
+        anomaly_text += "These spikes can often derail a well-planned budget if they become a recurring trend rather than one-time events. "
+        happened_parts.append(anomaly_text)
+    else:
+        happened_parts.append("I didn't detect any major unusual spending spikes this month, which indicates you're sticking well to your typical patterns.")
+
+    # ── 2. Detailed "Why It Matters" Section ──────────────────────────────────
+    matters_parts = []
+    
+    # Paragraph 1: Health & Ratio
+    health_desc = f"Your current Financial Health Score stands at **{health}/100**. This score is heavily influenced by your spending ratio, which is currently **{spending_ratio:.1f}%** of your income. "
+    if spending_ratio > 80:
+        health_desc += "A spending ratio above 80% leaves very little room for error and limited capacity for wealth building. "
+    elif spending_ratio < 50:
+        health_desc += "Maintaining a spending ratio below 50% is a powerful way to accelerate your wealth accumulation. "
+    else:
+        health_desc += "Your spending ratio is in a moderate range, but there is always room to optimize for higher savings. "
+    matters_parts.append(health_desc)
+    
+    # Paragraph 2: Goal Alignment
+    goal_desc = f"Your primary financial goal is **'{goal}'**. "
+    if savings > 0:
+        goal_desc += f"This month, you successfully generated a surplus of **₹{savings:,.2f}**. This amount is the fuel for your '{goal}' objective. If you continue at this rate, you are on a positive trajectory toward your targets. "
+    else:
+        goal_desc += f"Currently, you are in a deficit of **₹{abs(savings):,.2f}**. Every rupee spent beyond your income is a delay in reaching your '{goal}' goals. It's important to address this gap to ensure your long-term plans stay on track. "
+    matters_parts.append(goal_desc)
+    
+    # ── 3. Recommendations ──────────────────────────────────────────────────
+    recs = []
+    for cat in cats[:2]:
+        recs.append({
+            "type": "budget",
+            "category": cat,
+            "amount": int(curr_exp * 0.1),
+            "reason": f"By reducing your {cat} spending by just 10% (₹{curr_exp*0.1:,.0f}), you could significantly boost your monthly savings and shorten the time to reach your '{goal}' target."
+        })
+    
+    if anomalies:
+        recs.append({
+            "type": "goal",
+            "category": "Emergency Fund",
+            "amount": 5000,
+            "reason": "Given the unusual spending spikes detected this month, increasing your emergency fund contributions will provide a much-needed safety net for future surprises."
+        })
+    elif savings > 1000:
+         recs.append({
+            "type": "investment",
+            "category": "Wealth Building",
+            "amount": int(savings * 0.5),
+            "reason": f"Since you have a surplus this month, allocating 50% of it (₹{savings*0.5:,.0f}) toward investments would be a smart move to align with your '{goal}' objective."
+        })
+    
+    return {
+        "what_happened": "\n\n".join(happened_parts),
+        "why_it_matters": "\n\n".join(matters_parts),
+        "recommendations": recs
+    }
+
+
 def generate_monthly_xai_report(user_data_summary, user=None):
     """
-    Calls Gemini to generate the Explainable AI (XAI) Monthly Report.
-    Returns a structured dict with what_happened, why_it_matters, and actionable recommendations.
-    Now uses AIInsightsLog to:
-    - Cache the result for 24 hours (avoids duplicate API calls)
-    - Inject prior advice into the prompt so the AI measures user improvement over time
+    Calls Gemini to generate a humanized, detailed, and personalized Explainable AI (XAI) Monthly Report.
+    Utilizes historical summaries to provide accountability-driven progress tracking.
     """
     from insights.models import AIInsightsLog
     from django.utils import timezone
     from datetime import timedelta
+    import google.generativeai as genai
 
     feature_name = 'Monthly XAI Review'
 
@@ -335,75 +439,100 @@ def generate_monthly_xai_report(user_data_summary, user=None):
             try:
                 return json.loads(recent.generated_insight)
             except Exception:
-                pass  # fall through to regenerate
-
-    # ── 2. Load prior advice for Memory Injection ─────────────────────────────
-    prior_advice_text = ''
-    if user:
-        prior = AIInsightsLog.objects.filter(
-            user=user, feature_name=feature_name
-        ).order_by('-created_at').first()
-        if prior:
-            try:
-                prior_data = json.loads(prior.generated_insight)
-                prior_advice_text = f"""
-    IMPORTANT — MEMORY CONTEXT: You previously advised this user. Here is what you told them:
-    What Happened (prior): {prior_data.get('what_happened', '')}
-    Your Prior Recommendations: {json.dumps(prior_data.get('recommendations', []))}
-
-    Now compare their data then vs now and evaluate whether they followed your advice.
-    If they improved, acknowledge it. If they didn't, address it directly and firmly but constructively.
-    """
-            except Exception:
                 pass
+
+    # ── 2. Load prior advice for Historical Accountability (Last 3 Records) ──
+    memory_context = ""
+    if user:
+        priors = AIInsightsLog.objects.filter(
+            user=user, feature_name=feature_name
+        ).order_by('-created_at')[:3]
+        
+        if priors:
+            memory_list = []
+            for idx, p in enumerate(priors):
+                try:
+                    p_data = json.loads(p.generated_insight)
+                    memory_list.append(f"Advice {idx+1} ({p.created_at.strftime('%Y-%m-%d')}): {p_data.get('what_happened', '')} | Recs: {json.dumps(p_data.get('recommendations', []))}")
+                except Exception:
+                    continue
+            
+            if memory_list:
+                memory_context_str = "\n".join(memory_list)
+                memory_context = f"--- HISTORICAL ACCOUNTABILITY ---\n{memory_context_str}\n"
 
     api_key = getattr(settings, 'GEMINI_API_KEY', None)
     if not api_key or not genai:
-        return {
-            "what_happened": "AI service is currently unavailable. You spent ₹" + str(user_data_summary.get('current_month_spending', 0)) + " this month.",
-            "why_it_matters": "Tracking your expenses helps you maintain a healthy Spending Ratio.",
-            "recommendations": []
-        }
+        return generate_rule_based_monthly_report(user_data_summary)
 
     genai.configure(api_key=api_key)
-    prompt = f"""
-    You are an expert financial advisor AI. The user has requested a monthly review. Here is their data:
-    {prior_advice_text}
-    Current Month Income: ₹{user_data_summary.get('current_month_income', 0)}
-    Current Month Expense: ₹{user_data_summary.get('current_month_spending', 0)}
-    Previous Month Income: ₹{user_data_summary.get('previous_month_income', 0)}
-    Previous Month Expense: ₹{user_data_summary.get('previous_month_spending', 0)}
-    Financial Health Score (0-100): {user_data_summary.get('health_score', 0)}
-    Top 3 Expense Categories: {user_data_summary.get('top_categories', [])}
     
+    # Extract enriched context
+    profile = user_data_summary.get('user_profile', {})
+    anomalies = user_data_summary.get('anomalies', [])
+    cat_breakdown = user_data_summary.get('full_category_breakdown', {})
+    goals = user_data_summary.get('savings_goals', [])
+
+    prompt = f"""
+    You are 'Neo', a warm, empathetic, yet highly professional and analytical Financial Coach. 
+    Your goal is to provide a deep, humanized report on the user's financial behavior.
+
+    {memory_context}
+
+    --- USER CONTEXT ---
+    User Occupation: {profile.get('occupation')}
+    Financial Goal: {profile.get('financial_goal')}
+    Investment Risk Profile: {profile.get('investment_risk')}
+    
+    --- FINANCIAL DATA (MONTHLY SNAPSHOT) ---
+    Current Month: Income ₹{user_data_summary.get('current_month_income', 0)} | Spending ₹{user_data_summary.get('current_month_spending', 0)}
+    Previous Month: Income ₹{user_data_summary.get('previous_month_income', 0)} | Spending ₹{user_data_summary.get('previous_month_spending', 0)}
+    Financial Health Score: {user_data_summary.get('health_score', 0)}/100
+    
+    --- DETAILED CATEGORY BREAKDOWN ---
+    {json.dumps(cat_breakdown)}
+    
+    --- ACTIVE SAVINGS GOALS ---
+    {json.dumps(goals)}
+    
+    --- DETECTED ANOMALIES ---
+    {json.dumps(anomalies)}
+
     Instructions:
-    Return your response strictly as a JSON object with the following schema:
+    Generate a detailed response strictly as a JSON object. The tone should be humanized—speak directly to the user (use "you"). 
+
+    Required Schema:
     {{
-      "what_happened": "A 2-3 sentence summary. If you have prior context, reference whether the user improved since last time. Otherwise give a fresh read.",
-      "why_it_matters": "A 2-3 sentence explanation of how their spending impacted their Financial Health score.",
+      "what_happened": "A highly detailed report spanning 2-3 paragraphs (approx. 8-12 sentences total). Do NOT just list numbers; describe the 'story' of the month. Contrast their categories against their occupation ({profile.get('occupation')}). Acknowledge specific improvements or regressions based on the Historical Accountability section. Use '\n\n' for paragraph breaks.",
+      "why_it_matters": "A deep strategic analysis spanning 2 paragraphs (approx. 5-8 sentences). Connect their current spending velocity and financial health score directly to their '{profile.get('financial_goal')}' goal and their {profile.get('investment_risk')} risk tolerance. Explain the long-term impact on their future wealth. Use '\n\n' for paragraph breaks.",
       "recommendations": [
         {{
           "type": "budget" or "goal",
-          "category": "The exact category name (e.g., 'Food') or name of the goal",
-          "amount": integer amount suggested,
-          "reason": "Why this action will help them recover or improve."
+          "category": "Name of category or goal",
+          "amount": integer,
+          "reason": "A detailed 2-3 sentence behavioral nudge explaining WHY this specific action is the keys to unlocking their '{profile.get('financial_goal')}' goal."
         }}
       ]
     }}
-    Provide exactly 2 highly relevant recommendations. Ensure the JSON is valid. Do not wrap in markdown tags like ```json.
+    Provide exactly 3-4 highly personalized recommendations. Ensure valid JSON. No markdown backticks.
     """
     try:
         model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.2))
+        response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(temperature=0.3))
         
-        # Clean string just in case gemini still wraps it in markdown block
         raw_text = response.text.strip()
-        if raw_text.startswith("```json"):
-            raw_text = raw_text[7:]
-        if raw_text.endswith("```"):
-            raw_text = raw_text[:-3]
-
-        result = json.loads(raw_text)
+        
+        # Robust JSON extraction
+        json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(0)
+            result = json.loads(json_str)
+        else:
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:]
+            if raw_text.endswith("```"):
+                raw_text = raw_text[:-3]
+            result = json.loads(raw_text)
 
         # ── 3. Persist to AIInsightsLog ─────────────────────────────────────────
         if user:
@@ -417,9 +546,15 @@ def generate_monthly_xai_report(user_data_summary, user=None):
         return result
     except Exception as e:
         logger.error(f"XAI Monthly Report generation failed: {e}")
+        err_msg = str(e)
+        
+        # ACTIVATE RULE-BASED FALLBACK ON QUOTA ERRORS
+        if "429" in err_msg or "quota" in err_msg.lower() or "limit" in err_msg.lower():
+            return generate_rule_based_monthly_report(user_data_summary)
+
         return {
-            "what_happened": "We experienced an error generating your full AI report.",
-            "why_it_matters": "Detailed analysis is currently unavailable.",
+            "what_happened": "We experienced an unexpected error generating your AI report.",
+            "why_it_matters": "Technical Detail: " + err_msg[:100],
             "recommendations": []
         }
 
@@ -555,12 +690,12 @@ If no, reference the prior advice and push harder with a more direct recommendat
 You are a helpful financial AI assistant. Analyze the specific spending data for the user's '{cat}' category:
 
 {prior_advice_text}
-- Current Month Spend: \u20b9{category_data['current_month_spending']:.2f}
-- Previous Month Spend: \u20b9{category_data['previous_month_spending']:.2f}
+- Current Month Spend: ₹{category_data['current_month_spending']:.2f}
+- Previous Month Spend: ₹{category_data['previous_month_spending']:.2f}
 - Month-Over-Month Change: {category_data['percentage_change']}%
 - Anomaly Detected: {'Yes (' + category_data['anomaly_details'] + ')' if category_data['anomaly_flag'] else 'No'}
-- Forecasted Next 30 Days Spend: \u20b9{category_data['forecasted_next_month_spending']:.2f}
-- Suggested Budget Reduction: \u20b9{category_data['recommended_budget_limit']:.2f}
+- Forecasted Next 30 Days Spend: ₹{category_data['forecasted_next_month_spending']:.2f}
+- Suggested Budget Reduction: ₹{category_data['recommended_budget_limit']:.2f}
 
 Provide a focused, actionable 2-paragraph summary.
 1. Explain what these trends mean practically. Reference prior advice if available.
@@ -656,7 +791,7 @@ def get_advanced_ai_insights(user):
         elif pct_change < -10:
             desc = f"Great job! Your {cat} spending is down by {abs(pct_change):.1f}%."
         else:
-            desc = f"Your {cat} spending is stable at \u20b9{curr_total:.2f}."
+            desc = f"Your {cat} spending is stable at ₹{curr_total:.2f}."
             
         results.append({
             "type": "CategoryAnalysis",

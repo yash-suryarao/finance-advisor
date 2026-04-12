@@ -105,7 +105,8 @@
                     <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
                         <i class="ri-pie-chart-2-fill text-indigo-500 mr-2"></i> 50/30/20 Wellness
                     </h2>
-                    <p class="text-xs text-gray-500 mb-4">AI categorizes your spending into Needs, Wants, and Savings.</p>
+                    <p class="text-xs text-gray-500 mb-4">AI categorizes your spending into Needs, Wants, and Savings.
+                    </p>
                     <div id="wellnessChart" class="flex-grow w-full">
                         <div class="flex items-center justify-center h-full text-gray-400">
                             <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Analyzing wellness...
@@ -117,12 +118,16 @@
             <!-- New AI Insight Row -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 <!-- Category Burn Rate Forecaster -->
-                <div class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
+                <div
+                    class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
                     <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg font-bold text-gray-800"><i class="ri-fire-fill text-orange-500 mr-2"></i> Category Burn Rate Forecaster</h2>
-                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">ML Risk Detection</span>
+                        <h2 class="text-lg font-bold text-gray-800"><i class="ri-fire-fill text-orange-500 mr-2"></i>
+                            Category Burn Rate Forecaster</h2>
+                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">ML Risk
+                            Detection</span>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">Identifies which exact categories are accelerating the fastest vs your usual pacing.</p>
+                    <p class="text-xs text-gray-500 mb-4">Identifies which exact categories are accelerating the fastest
+                        vs your usual pacing.</p>
                     <div id="burnRateList" class="flex-grow overflow-y-auto space-y-4 custom-scrollbar pr-2">
                         <div class="flex items-center justify-center h-full text-gray-400">
                             <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Calculating pacing metrics...
@@ -131,11 +136,13 @@
                 </div>
 
                 <!-- AI Peer Benchmarking -->
-                <div class="bg-indigo-900 rounded-xl p-6 shadow-sm border border-indigo-800 flex flex-col h-[400px] text-white">
+                <div
+                    class="bg-indigo-900 rounded-xl p-6 shadow-sm border border-indigo-800 flex flex-col h-[400px] text-white">
                     <h2 class="text-lg font-bold text-white mb-2 flex items-center">
                         <i class="ri-group-fill text-indigo-300 mr-2"></i> Peer Benchmarking
                     </h2>
-                    <p class="text-xs text-indigo-200 mb-4">How you compare to users with similar geographic/income profiles.</p>
+                    <p class="text-xs text-indigo-200 mb-4">How you compare to users with similar geographic/income
+                        profiles.</p>
                     <div id="benchmarkList" class="flex-grow space-y-4">
                         <div class="flex items-center justify-center h-full text-indigo-300 text-sm">
                             <i class="ri-loader-4-line animate-spin text-2xl mr-2"></i> Fetching demographics...
@@ -281,8 +288,8 @@
                     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                     legend: { data: ['Actual Spend', 'Budget Limit'], bottom: 0 },
                     grid: { top: 30, right: 20, bottom: 50, left: 60 },
-                    xAxis: { type: 'category', data: data.months },
-                    yAxis: {
+                    xaxis: { type: 'category', data: data.months },
+                    yaxis: {
                         type: 'value',
                         axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
                     },
@@ -348,8 +355,8 @@
                     },
                     legend: { data: ['Actual Spend', 'ML Prediction', 'Budget Cap'], bottom: 0 },
                     grid: { top: 30, right: 20, bottom: 50, left: 65 },
-                    xAxis: { type: 'category', boundaryGap: false, data: data.days },
-                    yAxis: {
+                    xaxis: { type: 'category', boundaryGap: false, data: data.days },
+                    yaxis: {
                         type: 'value',
                         axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
                     },
@@ -463,20 +470,20 @@
                     },
                     series: { type: 'heatmap', coordinateSystem: 'calendar', data: chartData }
                 });
-                
+
                 // Add interactivity for clicks
                 heatmapChart.on('click', function (params) {
                     const date_str = params.data[0];
                     const amount = params.data[1];
                     const isAnomaly = anomalyDates.includes(date_str);
-                    
+
                     if (isAnomaly) {
                         alert(`🚨 HIGH SPEND ANOMALY DETECTED\n\nDate: ${date_str}\nSpend: ₹${amount.toLocaleString('en-IN')}\n\nThis amount deviated significantly from your usual daily median. Click "Generate AI Summary" for deeper AI attribution.`);
                     } else {
                         alert(`Normal Day\nDate: ${date_str}\nSpend: ₹${amount.toLocaleString('en-IN')}`);
                     }
                 });
-                
+
                 window.addEventListener('resize', () => heatmapChart.resize());
             } catch (e) {
                 console.error('Heatmap failed', e);
@@ -491,7 +498,7 @@
                 const res = await fetch('/api/insights/wellness-analyzer/', { headers: authHeaders() });
                 if (!res.ok) throw new Error("Failed");
                 const data = await res.json();
-                
+
                 const wChart = echarts.init(document.getElementById('wellnessChart'));
                 wChart.setOption({
                     tooltip: { trigger: 'item', formatter: '{b}: ₹{c} ({d}%)' },
@@ -547,7 +554,7 @@
                     const color = isHighRisk ? 'red' : 'indigo';
                     const icon = isHighRisk ? 'ri-error-warning-fill' : 'ri-check-line';
                     const pct = Math.min(cat.burn_percentage, 100);
-                    
+
                     listEl.innerHTML += `
                         <div class="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
                             <div class="flex justify-between items-center mb-1">
@@ -579,18 +586,18 @@
                 const res = await fetch('/api/insights/peer-benchmarking/', { headers: authHeaders() });
                 if (!res.ok) throw new Error("Failed");
                 const stats = await res.json();
-                
+
                 listEl.innerHTML = '';
                 stats.forEach(stat => {
                     const youStr = `₹${stat.your_spend.toLocaleString('en-IN')}`;
                     const avgStr = `₹${stat.peer_avg.toLocaleString('en-IN')}`;
                     const diff = stat.your_spend - stat.peer_avg;
                     const diffPct = stat.peer_avg > 0 ? (diff / stat.peer_avg * 100).toFixed(0) : 0;
-                    
+
                     let badge = '';
                     if (stat.is_good && diff < 0) badge = `<span class="bg-green-500/20 text-green-300 text-[10px] px-2 py-0.5 rounded-full ml-2">Great!</span>`;
                     else if (!stat.is_good && diff > 0) badge = `<span class="bg-red-500/20 text-red-300 text-[10px] px-2 py-0.5 rounded-full ml-2">+${diffPct}% Avg</span>`;
-                    
+
                     listEl.innerHTML += `
                         <div class="bg-indigo-800/50 p-3 rounded-lg border border-indigo-700/50">
                             <div class="flex justify-between items-center mb-2">
@@ -647,8 +654,17 @@
                 xaiLoading.classList.add('hidden');
                 xaiResult.classList.remove('hidden');
 
-                document.getElementById('xaiWhatHappened').innerText = data.what_happened || "Analysis complete.";
-                document.getElementById('xaiWhyItMatters').innerText = data.why_it_matters || "Keep tracking to improve.";
+                // Helper to format Markdown for the UI
+                const formatXAI = (text) => {
+                    if (!text) return "";
+                    return text
+                        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-indigo-900 font-bold">$1</strong>')
+                        .replace(/\n\n/g, '<br><br>')
+                        .replace(/\n/g, '<br>');
+                };
+
+                document.getElementById('xaiWhatHappened').innerHTML = formatXAI(data.what_happened);
+                document.getElementById('xaiWhyItMatters').innerHTML = formatXAI(data.why_it_matters);
 
                 const recBox = document.getElementById('xaiRecommendationsBox');
                 recBox.innerHTML = '';

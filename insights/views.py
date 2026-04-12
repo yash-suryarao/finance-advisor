@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from rest_framework import status
 
 from notifications.models import Notification
+from users.models import Profile, FinancialData
 from .serializers import BudgetInsightSerializer
 import pandas as pd
 
@@ -99,8 +100,34 @@ def monthly_xai_review(request):
     spending_score = min(50, max(0, ((100 - spending_ratio) / 20) * 50))
     health_score = int(max(0, min(100, savings_score + spending_score)))
     
-    # Top 3 Categories
+    # Top 3 Categories (for quick reference)
     top_cats = df[(df['date'].dt.to_period('M') == current_month_str) & (df['type'] == 'Expense')].groupby('category')['amount'].sum().nlargest(3).index.tolist()
+
+    # Full Category Breakdown (for deep behavioral analysis)
+    cat_breakdown = df[(df['date'].dt.to_period('M') == current_month_str) & (df['type'] == 'Expense')].groupby('category')['amount'].sum().to_dict()
+
+    # User Profile Data (for personalization)
+    profile = Profile.objects.filter(user=user).first()
+    profile_data = {
+        'occupation': profile.occupation if profile else 'Unknown',
+        'financial_goal': profile.financial_goal if profile else 'Budgeting',
+        'investment_risk': profile.investment_risk if profile else 'Medium'
+    }
+
+    # Savings Goals (for next steps) - Convert Decimals to Float for JSON serialization
+    goals_query = SavingsGoal.objects.filter(user=user).values('goal_name', 'target_amount', 'saved_amount', 'status')
+    goals = []
+    for g in goals_query:
+        goals.append({
+            'goal_name': g['goal_name'],
+            'target_amount': float(g['target_amount']),
+            'saved_amount': float(g['saved_amount']),
+            'status': g['status']
+        })
+
+    # Anomalies
+    from insights.utils import detect_anomalies
+    anomalies = detect_anomalies(user)
 
     user_data_summary = {
         'current_month_income': float(curr_inc),
@@ -108,7 +135,11 @@ def monthly_xai_review(request):
         'previous_month_income': float(prev_inc),
         'previous_month_spending': float(prev_exp),
         'health_score': health_score,
-        'top_categories': top_cats
+        'top_categories': top_cats,
+        'full_category_breakdown': cat_breakdown,
+        'user_profile': profile_data,
+        'savings_goals': goals,
+        'anomalies': anomalies
     }
 
     ai_report = generate_monthly_xai_report(user_data_summary, user=user)
