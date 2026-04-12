@@ -15,7 +15,7 @@ from insights.utils import get_advanced_ai_insights
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.db.models import Sum, Avg
-from .models import BudgetInsight, SavingsGoal
+from .models import BudgetInsight, SavingsGoal, AIInsightsLog
 from transactions.models import Budget as TransactionsBudget, BudgetHistory, Transaction
 from rest_framework import generics
 from rest_framework.decorators import api_view, permission_classes
@@ -923,11 +923,49 @@ def accept_suggested_budget(request):
     if not category or not new_limit:
         return Response({"error": "Missing category or new limit"}, status=400)
 
-    budget, created = TransactionsBudget.objects.get_or_create(user_id=user.id, category=category)
-    budget.monthly_limit = new_limit
-    budget.save()
+    from decimal import Decimal
+    # Safer upsert for budget: update first found or create fresh
+    budget = TransactionsBudget.objects.filter(user=user, category=category).first()
+    if budget:
+        budget.monthly_limit = Decimal(str(new_limit))
+        budget.save()
+    else:
+        TransactionsBudget.objects.create(
+            user=user,
+            category=category,
+            monthly_limit=Decimal(str(new_limit))
+        )
+
+    # Log the action for AI historical context
+    AIInsightsLog.objects.create(
+        user=user,
+        feature_name='User Action: Budget Accepted',
+        generated_insight=f"User accepted AI recommendation to set {category} budget to ₹{new_limit}",
+        context_snapshot={"category": category, "new_limit": float(new_limit)}
+    )
 
     return Response({"message": f"Budget updated successfully for {category}!", "new_limit": new_limit})
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def log_ai_action(request):
+    """
+    General endpoint to log user clicks on AI recommendations (e.g. 'Start Goal').
+    Used to build the historical memory loop for the AI advisor.
+    """
+    user = request.user
+    action_type = request.data.get("action_type") # e.g. 'goal_started'
+    category = request.data.get("category")
+    amount = request.data.get("amount")
+
+    AIInsightsLog.objects.create(
+        user=user,
+        feature_name=f'User Action: {action_type.replace("_", " ").title()}',
+        generated_insight=f"User clicked '{action_type}' for {category} (₹{amount})",
+        context_snapshot={"category": category, "amount": float(amount) if amount else 0}
+    )
+
+    return Response({"status": "success"})
 
 
 class BudgetInsightView(generics.ListAPIView):

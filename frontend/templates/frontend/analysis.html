@@ -697,7 +697,6 @@
 
         // Handle Set Budget / Set Goal from XAI recommendations
         async function handleXAIAction(type, category, amount) {
-            const token = localStorage.getItem('access_token');
             if (type === 'budget') {
                 const res = await fetch('/api/insights/accept-suggested-budget/', {
                     method: 'POST',
@@ -707,7 +706,37 @@
                 const d = await res.json();
                 alert(d.message || 'Budget updated!');
             } else {
-                alert(`Goal feature: Set a ₹${amount.toLocaleString('en-IN')} goal for "${category}" in the Goals section.`);
+                // Log the action for AI historical context
+                fetch('/api/insights/log-ai-action/', {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ action_type: 'goal_started', category: category, amount: amount })
+                });
+
+                // Calculate a default deadline (6 months from now)
+                const deadlineDate = new Date();
+                deadlineDate.setMonth(deadlineDate.getMonth() + 6);
+                const deadlineStr = deadlineDate.toISOString().split('T')[0];
+
+                // Actually CREATE the goal in the database
+                try {
+                    const res = await fetch('/api/insights/add-goal/', {
+                        method: 'POST',
+                        headers: authHeaders(),
+                        body: JSON.stringify({ 
+                            goal_name: category, 
+                            target_amount: amount,
+                            deadline: deadlineStr
+                        })
+                    });
+                    if (res.ok) {
+                        alert(`Success! A new goal for "${category}" (₹${amount.toLocaleString('en-IN')}) has been added with a 6-month deadline.`);
+                    } else {
+                        throw new Error("API Failed");
+                    }
+                } catch (e) {
+                    alert(`Failed to create goal automatically. You can add it manually in the Goals section.`);
+                }
             }
         }
 

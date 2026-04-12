@@ -311,7 +311,7 @@ def generate_rule_based_insight(category_data):
     return "\n".join(lines)
 
 
-def generate_rule_based_monthly_report(user_data_summary):
+def generate_rule_based_monthly_report(user_data_summary, user=None):
     """
     Creates a detailed, statistical summary when the LLM is unavailable.
     Expanded to be much more verbose and detailed across multiple paragraphs.
@@ -409,11 +409,26 @@ def generate_rule_based_monthly_report(user_data_summary):
             "reason": f"Since you have a surplus this month, allocating 50% of it (₹{savings*0.5:,.0f}) toward investments would be a smart move to align with your '{goal}' objective."
         })
     
-    return {
+    result = {
         "what_happened": "\n\n".join(happened_parts),
         "why_it_matters": "\n\n".join(matters_parts),
         "recommendations": recs
     }
+
+    # PERSIST FALLBACK to AIInsightsLog so memory loop stays consistent
+    if user:
+        try:
+            from insights.models import AIInsightsLog
+            AIInsightsLog.objects.create(
+                user=user,
+                feature_name='Monthly XAI Review',
+                context_snapshot=user_data_summary,
+                generated_insight=json.dumps(result)
+            )
+        except Exception as e:
+            logger.error(f"Failed to persist rule-based fallback: {e}")
+
+    return result
 
 
 def generate_monthly_xai_report(user_data_summary, user=None):
@@ -463,7 +478,7 @@ def generate_monthly_xai_report(user_data_summary, user=None):
 
     api_key = getattr(settings, 'GEMINI_API_KEY', None)
     if not api_key or not genai:
-        return generate_rule_based_monthly_report(user_data_summary)
+        return generate_rule_based_monthly_report(user_data_summary, user=user)
 
     genai.configure(api_key=api_key)
     
@@ -501,9 +516,16 @@ def generate_monthly_xai_report(user_data_summary, user=None):
     Instructions:
     Generate a detailed response strictly as a JSON object. The tone should be humanized—speak directly to the user (use "you"). 
 
+    ACCOUNTABILITY PROTOCOL:
+    1. Look at the '--- HISTORICAL ACCOUNTABILITY ---' section.
+    2. Identify specific past recommendations or budget targets the user previously accepted (logged as 'User Action').
+    3. Cross-reference these with the CURRENT 'DETAILED CATEGORY BREAKDOWN'.
+    4. If they stayed within the suggested limit, praise them for the discipline and explain how it helped their health score.
+    5. If they overspent on a target they accepted, identify it as a 'missed opportunity' and pivot the coaching to find the friction point.
+
     Required Schema:
     {{
-      "what_happened": "A highly detailed report spanning 2-3 paragraphs (approx. 8-12 sentences total). Do NOT just list numbers; describe the 'story' of the month. Contrast their categories against their occupation ({profile.get('occupation')}). Acknowledge specific improvements or regressions based on the Historical Accountability section. Use '\n\n' for paragraph breaks.",
+      "what_happened": "A highly detailed report spanning 2-3 paragraphs (approx. 8-12 sentences total). Do NOT just list numbers; describe the 'story' of the month. Contrast their categories against their occupation ({profile.get('occupation')}). RECOGNIZE their progress or struggles against the Historical Accountability data. Use '\n\n' for paragraph breaks.",
       "why_it_matters": "A deep strategic analysis spanning 2 paragraphs (approx. 5-8 sentences). Connect their current spending velocity and financial health score directly to their '{profile.get('financial_goal')}' goal and their {profile.get('investment_risk')} risk tolerance. Explain the long-term impact on their future wealth. Use '\n\n' for paragraph breaks.",
       "recommendations": [
         {{
@@ -550,7 +572,7 @@ def generate_monthly_xai_report(user_data_summary, user=None):
         
         # ACTIVATE RULE-BASED FALLBACK ON QUOTA ERRORS
         if "429" in err_msg or "quota" in err_msg.lower() or "limit" in err_msg.lower():
-            return generate_rule_based_monthly_report(user_data_summary)
+            return generate_rule_based_monthly_report(user_data_summary, user=user)
 
         return {
             "what_happened": "We experienced an unexpected error generating your AI report.",

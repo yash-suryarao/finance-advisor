@@ -13,7 +13,6 @@ urlpatterns = [
     # ==========================================
     path('ai-insights/', ai_insights, name='ai-insights'),
     path('category-detail/', category_insight_detail, name='category-insight-detail'),
-    path('accept-suggested-budget/', accept_suggested_budget, name='accept-suggested-budget'),
     path('budget-insights/', BudgetInsightView.as_view(), name='budget-insights'),
     path('monthly-review/', views.monthly_xai_review, name='monthly-review'),
     path('anomaly-heatmap/', views.get_anomaly_heatmap, name='anomaly-heatmap'),
@@ -30,6 +29,10 @@ urlpatterns = [
     path('ai-budget-suggestions/', views.ai_budget_suggestions, name='ai-budget-suggestions'),
     path('ai-budget-planner/', views.ai_budget_planner, name='ai-budget-planner'),
     path('overspend-predictions/', views.overspend_predictions, name='overspend-predictions'),
+    path('accept-suggested-budget/', views.accept_suggested_budget, name='accept-suggested-budget'),
+    path('log-ai-action/', views.log_ai_action, name='log-ai-action'),
+
+
 
     # ==========================================
     # 3. NOTIFICATIONS & 4. SAVINGS GOALS
