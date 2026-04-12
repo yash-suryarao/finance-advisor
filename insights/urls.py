@@ -41,5 +41,5 @@ urlpatterns = [
     path('delete-goal/<int:goal_id>/', delete_savings_goal, name='delete_savings_goal'),
     path('update-goal-savings/', update_goal_savings, name='update_goal_savings'),
     path('withdraw-goal-savings/', withdraw_goal_savings, name='withdraw_goal_savings'),
+    path('savings-projections/', views.get_savings_projections, name='savings_projections'),
 ]
-

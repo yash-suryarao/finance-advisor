@@ -24,10 +24,10 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 app.conf.beat_schedule = {
     'send-payment-reminders': {
         'task': 'payments.tasks.send_payment_reminders',
-        'schedule': crontab(hour=9, minute=0),  # Run daily at 9 AM
+        'schedule': crontab(hour=9, minute=0),
     },
     'send-bill-reminders': {
         'task': 'notifications.tasks.send_bill_reminders',
-        'schedule': crontab(hour=8, minute=30), # Run daily at 8:30 AM
+        'schedule': crontab(hour=8, minute=30),
     },
 }
