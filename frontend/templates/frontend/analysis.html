@@ -90,7 +90,7 @@
                 <div
                     class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex flex-col h-[400px]">
                     <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-lg font-bold text-gray-800">Zero-Based Budget Trajectory <span
+                        <h2 class="text-lg font-bold text-gray-800">Spending Trajectory <span
                                 class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full ml-2">ML
                                 Model</span></h2>
                         <div class="text-sm font-medium text-gray-500">Pacing vs Target</div>
@@ -288,8 +288,8 @@
                     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                     legend: { data: ['Actual Spend', 'Budget Limit'], bottom: 0 },
                     grid: { top: 30, right: 20, bottom: 50, left: 60 },
-                    xaxis: { type: 'category', data: data.months },
-                    yaxis: {
+                    xAxis: { type: 'category', data: data.months },
+                    yAxis: {
                         type: 'value',
                         axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
                     },
@@ -355,8 +355,8 @@
                     },
                     legend: { data: ['Actual Spend', 'ML Prediction', 'Budget Cap'], bottom: 0 },
                     grid: { top: 30, right: 20, bottom: 50, left: 65 },
-                    xaxis: { type: 'category', boundaryGap: false, data: data.days },
-                    yaxis: {
+                    xAxis: { type: 'category', boundaryGap: false, data: data.days },
+                    yAxis: {
                         type: 'value',
                         axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
                     },
@@ -723,8 +723,8 @@
                     const res = await fetch('/api/insights/add-goal/', {
                         method: 'POST',
                         headers: authHeaders(),
-                        body: JSON.stringify({ 
-                            goal_name: category, 
+                        body: JSON.stringify({
+                            goal_name: category,
                             target_amount: amount,
                             deadline: deadlineStr
                         })
