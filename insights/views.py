@@ -431,11 +431,73 @@ def get_spending_trends(request):
         months_labels.append(label)
         actual_spends.append(actual)
         budget_limits.append(hist_budget)
-
     return Response({
         'months': months_labels,
         'actual_spends': actual_spends,
         'budget_limits': budget_limits,
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_category_spending_trends(request):
+    """
+    Returns last 6 months of spending broken down by top 4 categories + "Other".
+    Used for a Stacked Bar Chart.
+    """
+    user = request.user
+    today = datetime.today()
+
+    months_labels = []
+    month_filters = []
+
+    for i in range(5, -1, -1):
+        month = (today.month - 1 - i) % 12 + 1
+        year = today.year + ((today.month - 1 - i) // 12)
+        import calendar
+        months_labels.append(calendar.month_abbr[month])
+        month_filters.append((year, month))
+
+    start_year, start_month = month_filters[0]
+    start_date = datetime(start_year, start_month, 1)
+    
+    top_qs = (Transaction.objects.filter(
+        user=user, category_type='expense', date__gte=start_date
+    ).values('category__name').annotate(total=Sum('amount')).order_by('-total')[:4])
+    
+    top_cats = [item['category__name'] for item in top_qs if item['category__name']]
+
+    series_data = {cat: [0]*6 for cat in top_cats}
+    series_data['Other'] = [0]*6
+
+    for idx, (yr, mo) in enumerate(month_filters):
+        qs = Transaction.objects.filter(
+            user=user, category_type='expense', date__year=yr, date__month=mo
+        ).values('category__name').annotate(total=Sum('amount'))
+        
+        for item in qs:
+            cat = item['category__name']
+            amt = float(item['total'] or 0)
+            if cat in top_cats:
+                series_data[cat][idx] += amt
+            else:
+                series_data['Other'][idx] += amt
+
+    series_list = []
+    for cat in top_cats:
+        series_list.append({
+            'name': cat,
+            'data': [round(x, 2) for x in series_data[cat]]
+        })
+    if sum(series_data['Other']) > 0:
+        series_list.append({
+            'name': 'Other',
+            'data': [round(x, 2) for x in series_data['Other']]
+        })
+
+    return Response({
+        'months': months_labels,
+        'series': series_list
     }, status=status.HTTP_200_OK)
 
 

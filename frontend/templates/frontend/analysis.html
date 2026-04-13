@@ -84,6 +84,20 @@
                 <div id="trendsChart" class="h-80 w-full"></div>
             </div>
 
+            <!-- Category Spending Trend Chart -->
+            <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-lg font-bold text-gray-800">Category Spending Trend <span
+                            class="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full ml-2">Breakdown</span>
+                    </h2>
+                    <select
+                        class="bg-gray-50 border border-gray-200 text-gray-700 rounded-md py-1.5 px-3 text-sm outline-none focus:border-indigo-500">
+                        <option>Last 6 Months</option>
+                    </select>
+                </div>
+                <div id="categoryTrendsChart" class="h-80 w-full"></div>
+            </div>
+
             <!-- Dynamic ML Analysis Row -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                 <!-- Zero-Based Budget Predictor -->
@@ -323,6 +337,46 @@
                 window._spendingTrends = data;
             } catch (e) {
                 console.error('Spending trends failed', e);
+            }
+        }
+
+        // ============================================================
+        // 2B. CATEGORY SPENDING TRENDS — /api/insights/category-spending-trends/
+        // ============================================================
+        async function fetchCategoryTrends() {
+            try {
+                const res = await fetch('/api/insights/category-spending-trends/', { headers: authHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const catTrendsChart = echarts.init(document.getElementById('categoryTrendsChart'));
+
+                // Colors for top 4 + Other
+                const colorPalette = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#9ca3af'];
+
+                // Append common ECharts configurations for stacked bars
+                const formattedSeries = data.series.map((s, idx) => ({
+                    ...s,
+                    type: 'bar',
+                    stack: 'total',
+                    emphasis: { focus: 'series' },
+                    itemStyle: { color: colorPalette[idx % colorPalette.length] }
+                }));
+
+                catTrendsChart.setOption({
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                    legend: { bottom: 0 },
+                    grid: { top: 30, right: 20, bottom: 50, left: 60 },
+                    xAxis: { type: 'category', data: data.months },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: { formatter: (v) => '₹' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
+                    },
+                    series: formattedSeries
+                });
+                window.addEventListener('resize', () => catTrendsChart.resize());
+            } catch (e) {
+                console.error('Category trends failed', e);
             }
         }
 
@@ -801,6 +855,7 @@
             await fetchAnalysisSummary();
             // Run charts in parallel — all independent
             fetchSpendingTrends();
+            fetchCategoryTrends();
             fetchTrajectory();
             fetchHeatmapData();
             fetchWellnessAnalysis();

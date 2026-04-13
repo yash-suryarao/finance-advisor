@@ -23,6 +23,7 @@ urlpatterns = [
     # Analysis Page — Real Data Endpoints
     path('analysis-summary/', views.get_analysis_summary, name='analysis-summary'),
     path('spending-trends/', views.get_spending_trends, name='spending-trends'),
+    path('category-spending-trends/', views.get_category_spending_trends, name='category-spending-trends'),
     path('budget-trajectory/', views.get_budget_trajectory, name='budget-trajectory'),
 
     # AI Budget Advisory Features
