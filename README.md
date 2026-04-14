@@ -107,9 +107,3 @@ The project is built on a modular backend-heavy architecture, separating core le
    Navigate to `http://127.0.0.1:8000/` to access the application.
 
 ---
-
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](../../issues).
-
-## 📄 License
-This project is licensed under the MIT License - see the `LICENSE` file for details.
